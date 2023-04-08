@@ -45,7 +45,7 @@ def parse(line: str) -> list[str]:
 
 def eval_expr(expr: str) -> int:
   expr = eval_symbol(expr)
-  return eval(expr, labels) # eval as Python expr
+  return eval(expr, labels.copy()) # eval as Python expr
 
 def eval_symbol(c: str):
   if c in labels:
@@ -85,7 +85,7 @@ labels: dict[str, int] = {}
 address = 0
 
 for (lineNo, line) in enumerate(src_lines):
-  line = line.strip()
+  line = line.split(";")[0].strip()
   if line == "": continue
   keyword, *args = line.lower().split()
   match keyword:
@@ -97,8 +97,6 @@ for (lineNo, line) in enumerate(src_lines):
       continue
 
   address += 1
-
-print("labels:", labels)
 
 # 2nd pass
 
@@ -122,33 +120,50 @@ for (lineNo, line) in enumerate(src_lines):
 
     # Instructions
     case "alu":
+      # S (alu op)
+      # L (lhs)
+      # R (rhs)
+      # T (target)
       word = (0b0000 << 12) + \
-             (eval_expr(args[0]) << 9) + \
-             (eval_expr(args[1]) << 6) + \
-             (eval_expr(args[2]) << 3) + \
+             (eval_expr(args[0]) << 3) + \
+             (eval_expr(args[1]) << 9) + \
+             (eval_expr(args[2]) << 6) + \
              (eval_expr(args[3]) << 0)
     case "als":
+      # S (alu op)
+      # L (lhs)
+      # R (rhs)
+      # T (target)
       word = (0b0001 << 12) + \
-             (eval_expr(args[0]) << 9) + \
-             (eval_expr(args[1]) << 6) + \
-             (eval_expr(args[2]) << 3) + \
+             (eval_expr(args[0]) << 3) + \
+             (eval_expr(args[1]) << 9) + \
+             (eval_expr(args[2]) << 6) + \
              (eval_expr(args[3]) << 0)
     case "ldr":
+      # R (address)
+      # T (target)
       word = (0b0010 << 12) + \
              (eval_expr(args[0]) << 9) + \
-             (eval_expr(args[1]) << 6)
+             (eval_expr(args[1]) << 0)
     case "str":
+      # R (address)
+      # T (value to store)
       word = (0b0011 << 12) + \
              (eval_expr(args[0]) << 9) + \
              (eval_expr(args[1]) << 6)
     case "ldi":
+      # T (target)
+      # I (immediate)
       word = (0b0100 << 12) + \
-             (eval_expr(args[0]) << 9) + \
-             (eval_expr(args[1]) << 0)
+             (eval_expr(args[0]) << 0) + \
+             (eval_expr(args[1]) << 3)
     case "jmp":
+      # R (reg holding address)
       word = (0b0101 << 12) + \
              (eval_expr(args[0]) << 9)
     case "br":
+      # F (flag selector)
+      # R (reg holding address)
       word = (0b0110 << 12) + \
              (eval_expr(args[0]) << 9) + \
              (eval_expr(args[1]) << 6)
@@ -160,20 +175,20 @@ for (lineNo, line) in enumerate(src_lines):
       word = (0b0000                   << 12) + \
              (eval_expr(args[0])       << 9) + \
              (eval_expr(args[1])       << 6) + \
-             (eval_expr(args[2])       << 3) + \
-             (eval_expr("al_a_plus_b") << 0)
+             (eval_expr("al_a_plus_b") << 3) + \
+             (eval_expr(args[2])       << 0)
     case "sub":
       word = (0b0000                    << 12) + \
              (eval_expr(args[0])        << 9) + \
              (eval_expr(args[1])        << 6) + \
-             (eval_expr(args[2])        << 3) + \
-             (eval_expr("al_a_minus_b") << 0)
+             (eval_expr("al_a_minus_b") << 3) + \
+             (eval_expr(args[2])        << 0)
     case "mov":
       word = (0b0000                   << 12) + \
              (eval_expr("rz")          << 9) + \
              (eval_expr(args[0])       << 6) + \
-             (eval_expr(args[1])       << 3) + \
-             (eval_expr("al_a_plus_b") << 0)
+             (eval_expr("al_a_plus_b") << 3) + \
+             (eval_expr(args[1])       << 0)
 
     # Default case: evaluate as is (e.g. data word)
     case _:
@@ -184,6 +199,10 @@ for (lineNo, line) in enumerate(src_lines):
 
   if len(result) < 2 * address + 1:
     result.extend((2 * address + 1 - len(result)) * nop)
+
+  for (label, label_addr) in labels.items():
+    if address == label_addr:
+      print(f"{label}:")
 
   print(f"{address:>08x}  0x{word:>04x}  {line}")
   result[2 * address + 0] = ((word >> 8) & 0xff)

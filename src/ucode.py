@@ -16,16 +16,16 @@ PC_CO   = 0b0000_0000_0000_0001
 PC_IE   = 0b0000_0000_0000_0010
 PC_OE   = 0b0000_0000_0000_0100
 MAR_IE  = 0b0000_0000_0000_1000
-RAM_IE  = 0b0000_0000_0001_0000
-RAM_OE  = 0b0000_0000_0010_0000
-R1_IE   = 0b0000_0000_0100_0000
+MEM_IE  = 0b0000_0000_0001_0000
+MEM_OE  = 0b0000_0000_0010_0000
+RW_IE   = 0b0000_0000_0100_0000
 R1_OE   = 0b0000_0000_1000_0000
-R2_IE   = 0b0000_0001_0000_0000
-R2_OE   = 0b0000_0010_0000_0000
-IR_IE   = 0b0000_0100_0000_0000
-L9_OE   = 0b0000_1000_0000_0000
-L12_OE  = 0b0001_0000_0000_0000
-ALU_OE  = 0b0010_0000_0000_0000
+R2_OE   = 0b0000_0001_0000_0000
+IR_IE   = 0b0000_0010_0000_0000
+L9_OE   = 0b0000_0100_0000_0000
+unused1 = 0b0000_1000_0000_0000
+ALU_OE  = 0b0001_0000_0000_0000
+FR_IE   = 0b0010_0000_0000_0000
 HALT    = 0b0100_0000_0000_0000
 US_RS   = 0b1000_0000_0000_0000
 
@@ -39,22 +39,22 @@ def not_branch(bs):
 def branch(false_branch, true_branch):
   return [false_branch, true_branch]
 
-fetch = [PC_OE|MAR_IE, RAM_OE|IR_IE|PC_CO]
+fetch = [PC_OE|MAR_IE, MEM_OE|IR_IE|PC_CO]
 
 def nop():
   return not_branch([*fetch, US_RS, 0, 0, 0, 0, 0])
 
 ucode = [
-  # ALU 0000 LLLR RRTT TSSS
-  not_branch([*fetch, ALU_OE, US_RS, 0, 0, 0, 0]),
-  # ALS 0001 LLLR RRTT TSSS
-  not_branch([*fetch, ALU_OE, US_RS, 0, 0, 0, 0]),
-  # LDR 0010 RRRT TTXX XXXX
-  not_branch([*fetch, R1_OE|MAR_IE, RAM_OE|R2_IE, US_RS, 0, 0, 0]),
+  # ALU 0000 LLLR RRSS STTT
+  not_branch([*fetch, ALU_OE|FR_IE|RW_IE, US_RS, 0, 0, 0, 0]),
+  # ALS 0001 LLLR RRSS STTT
+  not_branch([*fetch, ALU_OE|FR_IE|RW_IE, US_RS, 0, 0, 0, 0]),
+  # LDR 0010 RRRX XXXX XTTT
+  not_branch([*fetch, R1_OE|MAR_IE, MEM_OE|RW_IE, US_RS, 0, 0, 0]),
   # STR 0011 RRRT TTXX XXXX
-  not_branch([*fetch, R1_OE|MAR_IE, R2_OE|RAM_IE, US_RS, 0, 0, 0]),
-  # LDI 0100 RRRI IIII IIII
-  not_branch([*fetch, L9_OE|R1_IE, US_RS, 0, 0, 0, 0]),
+  not_branch([*fetch, R1_OE|MAR_IE, R2_OE|MEM_IE, US_RS, 0, 0, 0]),
+  # LDI 0100 IIII IIII ITTT
+  not_branch([*fetch, H9_OE|RW_IE, US_RS, 0, 0, 0, 0]),
   # JMP 0101 RRRX XXXX XXXX
   not_branch([*fetch, R1_OE|PC_IE, US_RS, 0, 0, 0, 0]),
   # BR  0110 XFFR RRXX XXXX
