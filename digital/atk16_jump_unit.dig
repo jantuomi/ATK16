@@ -59,42 +59,14 @@
       <elementAttributes>
         <entry>
           <string>Description</string>
-          <string>OPCODE</string>
+          <string>Immediate mode on?</string>
         </entry>
         <entry>
           <string>Label</string>
-          <string>OPCODE</string>
-        </entry>
-        <entry>
-          <string>Bits</string>
-          <int>4</int>
+          <string>IM_M</string>
         </entry>
       </elementAttributes>
       <pos x="180" y="460"/>
-    </visualElement>
-    <visualElement>
-      <elementName>Splitter</elementName>
-      <elementAttributes>
-        <entry>
-          <string>Input Splitting</string>
-          <string>4</string>
-        </entry>
-        <entry>
-          <string>Output Splitting</string>
-          <string>1,</string>
-        </entry>
-      </elementAttributes>
-      <pos x="240" y="460"/>
-    </visualElement>
-    <visualElement>
-      <elementName>Text</elementName>
-      <elementAttributes>
-        <entry>
-          <string>Description</string>
-          <string>OP parity bit</string>
-        </entry>
-      </elementAttributes>
-      <pos x="220" y="480"/>
     </visualElement>
     <visualElement>
       <elementName>Out</elementName>
@@ -145,13 +117,18 @@
         <entry>
           <string>Testdata</string>
           <testData>
-            <dataString>PC    ADDR    OPCODE    PC_RES
-10    20      0b0101    20
-10    20      0b0110    30</dataString>
+            <dataString>PC    ADDR    IM_M PC_RES
+10    20      0    20
+10    20      1    30</dataString>
           </testData>
         </entry>
       </elementAttributes>
       <pos x="180" y="620"/>
+    </visualElement>
+    <visualElement>
+      <elementName>Not</elementName>
+      <elementAttributes/>
+      <pos x="200" y="460"/>
     </visualElement>
   </visualElements>
   <wires>
@@ -172,14 +149,6 @@
       <p2 x="580" y="360"/>
     </wire>
     <wire>
-      <p1 x="180" y="460"/>
-      <p2 x="240" y="460"/>
-    </wire>
-    <wire>
-      <p1 x="260" y="460"/>
-      <p2 x="420" y="460"/>
-    </wire>
-    <wire>
       <p1 x="180" y="300"/>
       <p2 x="240" y="300"/>
     </wire>
@@ -194,6 +163,14 @@
     <wire>
       <p1 x="200" y="380"/>
       <p2 x="400" y="380"/>
+    </wire>
+    <wire>
+      <p1 x="180" y="460"/>
+      <p2 x="200" y="460"/>
+    </wire>
+    <wire>
+      <p1 x="240" y="460"/>
+      <p2 x="420" y="460"/>
     </wire>
     <wire>
       <p1 x="420" y="380"/>
