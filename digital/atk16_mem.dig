@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <circuit>
   <version>2</version>
-  <attributes/>
+  <attributes>
+    <entry>
+      <string>romContent</string>
+      <romList>
+        <roms/>
+      </romList>
+    </entry>
+    <entry>
+      <string>Width</string>
+      <int>5</int>
+    </entry>
+  </attributes>
   <visualElements>
     <visualElement>
       <elementName>RAMAsync</elementName>
@@ -56,8 +67,8 @@
         </entry>
         <entry>
           <string>Data</string>
-          <data>4019,5200,8000,4051,40a2,29b,4014,2804,38c0,d9,40f2,4084,293,6500
-,4011,f000,4009,f000</data>
+          <data>4203,5040,8000,420a,4414,650,4802,2900,38c0,12c0,441e,4810,651
+,7500,4202,f000,4201,f000</data>
         </entry>
       </elementAttributes>
       <pos x="740" y="100"/>

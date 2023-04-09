@@ -3,7 +3,7 @@
 ; ROM (and program execution) starts at offset 0x0
 @address 0x0
   ldi RA program
-  jmp RA
+  jpr RA
 
 @label ram_offset
   0x8000            ; store ram offset for later memory access

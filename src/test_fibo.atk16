@@ -1,0 +1,47 @@
+@opt stack_pointer RG
+
+@label program
+  ; call fibo subroutine with parameter 10
+  ldi RA 10
+  csr fibo
+  hlt
+
+@label fibo
+  ; function fibo
+  ; parameters:
+  ;  RA   n : u16
+  ; return value:
+  ;  RA   fibo(n) : u16
+
+  spu RB                ; prelude
+  spu RC
+
+  ldi RC 2              ; if n < 2, return n
+  sub RA RC RA
+  bri f_sign fibo_early
+
+  spu RD                 ; prelude
+  spu RE
+
+  ldi RE 1               ; constant 1
+  ldi RB 0               ; a = 0
+  ldi RC 1               ; b = 1
+@label fibo_loop
+  add RB RC RD           ; v = a + b
+  mov RC RB              ; a = b
+  mov RD RC              ; b = v
+  sub RA RE RA           ; n -= 1
+  bri f_zero fibo_done   ; loop while n > 0
+  jpi fibo_loop
+
+@label fibo_early
+  spo RC
+  spo RB
+  rsr
+@label fibo_done
+  ldr RD RA
+  spo RE
+  spo RD
+  spo RC
+  spo RB
+  rsr

@@ -20,23 +20,23 @@ MEM_IE  = 0b0000_0000_0001_0000
 MEM_OE  = 0b0000_0000_0010_0000
 RW_IE   = 0b0000_0000_0100_0000
 R1_OE   = 0b0000_0000_1000_0000
-R2_OE   = 0b0000_0001_0000_0000
+R2_OE   = 0b0000_0001_0000_0000 # needed?
 IR_IE   = 0b0000_0010_0000_0000
-L9_OE   = 0b0000_0100_0000_0000
-unused1 = 0b0000_1000_0000_0000
+unused  = 0b0000_0100_0000_0000
+LI_OE   = 0b0000_1000_0000_0000
 ALU_OE  = 0b0001_0000_0000_0000
 FR_IE   = 0b0010_0000_0000_0000
 HALT    = 0b0100_0000_0000_0000
 US_RS   = 0b1000_0000_0000_0000
 
 BRANCH_FLAG_STATES_N = 2
-UCODE_N = 2**3
+UCODE_N: int = 2**3
 CONTROL_WORD_SIZE = 2
 
-def not_branch(bs):
+def not_branch(bs: list[int]) -> list[list[int]]:
   return BRANCH_FLAG_STATES_N * [bs]
 
-def branch(false_branch, true_branch):
+def branch(false_branch: list[int], true_branch: list[int]) -> list[list[int]]:
   return [false_branch, true_branch]
 
 fetch = [PC_OE|MAR_IE, MEM_OE|IR_IE|PC_CO]
@@ -45,25 +45,26 @@ def nop():
   return not_branch([*fetch, US_RS, 0, 0, 0, 0, 0])
 
 ucode = [
-  # ALU 0000 LLLR RRSS STTT
+  # ALR 0000 TTTL LLRR RSSS
   not_branch([*fetch, ALU_OE|FR_IE|RW_IE, US_RS, 0, 0, 0, 0]),
-  # ALS 0001 LLLR RRSS STTT
+  # ALI 0001 TTTL LLII ISSS
   not_branch([*fetch, ALU_OE|FR_IE|RW_IE, US_RS, 0, 0, 0, 0]),
-  # LDR 0010 RRRX XXXX XTTT
+  # LDR 0010 TTTR RRXX XXXX
   not_branch([*fetch, R1_OE|MAR_IE, MEM_OE|RW_IE, US_RS, 0, 0, 0]),
-  # STR 0011 RRRT TTXX XXXX
-  not_branch([*fetch, R1_OE|MAR_IE, R2_OE|MEM_IE, US_RS, 0, 0, 0]),
-  # LDI 0100 IIII IIII ITTT
-  not_branch([*fetch, H9_OE|RW_IE, US_RS, 0, 0, 0, 0]),
-  # JMP 0101 RRRX XXXX XXXX
+  # STR 0011 TTTR RRXX XXXX
+  not_branch([*fetch, R1_OE|MAR_IE, R1_OE|MEM_IE, US_RS, 0, 0, 0]),
+  # LDI 0100 TTTI IIII IIII
+  not_branch([*fetch, LI_OE|RW_IE, US_RS, 0, 0, 0, 0]),
+  # JPR 0101 XXXR RRXX XXXX
   not_branch([*fetch, R1_OE|PC_IE, US_RS, 0, 0, 0, 0]),
-  # BR  0110 XFFR RRXX XXXX
+  # JPI 0110 XXXI IIII IIII
+  not_branch([*fetch, LI_OE|PC_IE, US_RS, 0, 0, 0, 0]),
+  # BR  0111 XFFR RRXX XXXX
   branch([*fetch, US_RS, 0, 0, 0, 0, 0],
-         [*fetch, R2_OE|PC_IE, US_RS, 0, 0, 0, 0]),
-  # NOP 0111 XXXX XXXX XXXX
-  nop(),
-  # NOP 1000 XXXX XXXX XXXX
-  nop(),
+         [*fetch, R1_OE|PC_IE, US_RS, 0, 0, 0, 0]),
+  # BRI 1000 XFFI IIII IIII
+  branch([*fetch, US_RS, 0, 0, 0, 0, 0],
+         [*fetch, LI_OE|PC_IE, US_RS, 0, 0, 0, 0]),
   # NOP 1001 XXXX XXXX XXXX
   nop(),
   # NOP 1010 XXXX XXXX XXXX
