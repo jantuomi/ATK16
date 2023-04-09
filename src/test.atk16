@@ -2,8 +2,7 @@
 
 ; ROM (and program execution) starts at offset 0x0
 @address 0x0
-  ldi RA program
-  jpr RA
+  jpi program
 
 @label ram_offset
   0x8000            ; store ram offset for later memory access
@@ -20,9 +19,8 @@
 ; Check that 10 + 20 = 30
   mov RC RA         ; RA := result of sum
   ldi RB 30         ; RB := 30
-  ldi RD success
   sub RA RB RC      ; RC := RA - RB
-  br f_zero RD      ; if result is zero, jump to success
+  bri f_zero success  ; if result is zero, jump to success
 
   ldi RA 2          ; RA := 2 to signal failure
   hlt

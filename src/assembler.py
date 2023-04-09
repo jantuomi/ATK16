@@ -174,7 +174,7 @@ def make_jpr(addr_reg: str) -> list[int]:
 def make_jpi(address: int, imm: str) -> list[int]:
   """JPI 0110 XXXI IIII IIII"""
   imm_e = eval_expr(imm)
-  imm_e -= address
+  imm_e = imm_e - address - 1
   word = (0b0110 << 12) + \
               imm_e
   return [word]
@@ -192,7 +192,7 @@ def make_bri(address: int, flag_s: str, imm: str) -> list[int]:
   """BRI 1000 XFFI IIII IIII"""
   flag_s_e = eval_expr(flag_s)
   imm_e = eval_expr(imm)
-  imm_e -= address
+  imm_e = imm_e - address - 1
   word = (0b1000 << 12) + \
               (flag_s_e << 9) + \
               imm_e
