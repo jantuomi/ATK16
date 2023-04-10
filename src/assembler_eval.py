@@ -13,9 +13,9 @@ constants: dict[str, str] = {
   "al_and": "2",
   "al_or": "3",
   "al_xor": "4",
-  "al_shift_lr": "5",
-  "al_shift_ar": "6",
-  "al_shift_ll": "7",
+  "al_slr": "5",
+  "al_sar": "6",
+  "al_sll": "7",
   # ALU flags
   "f_carry": "0",
   "f_overflow": "1",

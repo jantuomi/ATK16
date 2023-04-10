@@ -50,7 +50,8 @@ def parse(line: str) -> list[str]:
 # 1st pass, gather labels, set options, eval operations
 
 options: dict[str, str] = {
-  "stack_pointer": "6" # RG
+  "stack_pointer": "6", # RG
+  "csr_scratch": "5",   # RF
 }
 address: int = 0
 

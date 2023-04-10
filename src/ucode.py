@@ -65,8 +65,8 @@ ucode = [
   # BRI 1000 XFFI IIII IIII
   branch([*fetch, US_RS, 0, 0, 0, 0, 0],
          [*fetch, IM_M|LI_OE|PC_IE, US_RS, 0, 0, 0, 0]),
-  # NOP 1001 XXXX XXXX XXXX
-  nop(),
+  # LPC 1001 TTTX XXXX XXXX
+  not_branch([*fetch, PC_OE|RW_IE, US_RS, 0, 0, 0, 0]),
   # NOP 1010 XXXX XXXX XXXX
   nop(),
   # NOP 1011 XXXX XXXX XXXX
