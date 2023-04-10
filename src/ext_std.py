@@ -1,102 +1,88 @@
 from assembler_ops import *
 
-def make_add(meta: Meta, left: str, right: str, target: str) -> list[int]:
-  return make_alr(meta, "al_plus", left, right, target)
+def expand_add(left: str, right: str, target: str) -> ExpandResult:
+  return [["alr", "al_plus", left, right, target]]
 
-def make_sub(meta: Meta, left: str, right: str, target: str) -> list[int]:
-  return make_alr(meta, "al_minus", left, right, target)
+def expand_sub(left: str, right: str, target: str) -> ExpandResult:
+  return [["alr", "al_minus", left, right, target]]
 
-def make_addi(meta: Meta, left: str, imm: str, target: str) -> list[int]:
-  return make_ali(meta, "al_plus", left, imm, target)
+def expand_addi(left: str, imm: str, target: str) -> ExpandResult:
+  return [["ali", "al_plus", left, imm, target]]
 
-def make_subi(meta: Meta, left: str, imm: str, target: str) -> list[int]:
-  return make_ali(meta, "al_minus", left, imm, target)
+def expand_subi(left: str, imm: str, target: str) -> ExpandResult:
+  return [["ali", "al_minus", left, imm, target]]
 
-def make_and(meta: Meta, left: str, right: str, target: str) -> list[int]:
-  return make_alr(meta, "al_and", left, right, target)
+def expand_and(left: str, right: str, target: str) -> ExpandResult:
+  return [["alr", "al_and", left, right, target]]
 
-def make_or(meta: Meta, left: str, right: str, target: str) -> list[int]:
-  return make_alr(meta, "al_or", left, right, target)
+def expand_or(left: str, right: str, target: str) -> ExpandResult:
+  return [["alr", "al_or", left, right, target]]
 
-def make_xor(meta: Meta, left: str, right: str, target: str) -> list[int]:
-  return make_alr(meta, "al_xor", left, right, target)
+def expand_xor(left: str, right: str, target: str) -> ExpandResult:
+  return [["alr", "al_xor", left, right, target]]
 
-def make_sll(meta: Meta, left: str, right: str, target: str) -> list[int]:
-  return make_alr(meta, "al_sll", left, right, target)
+def expand_sll(left: str, right: str, target: str) -> ExpandResult:
+  return [["alr", "al_sll", left, right, target]]
 
-def make_slr(meta: Meta, left: str, right: str, target: str) -> list[int]:
-  return make_alr(meta, "al_slr", left, right, target)
+def expand_slr(left: str, right: str, target: str) -> ExpandResult:
+  return [["alr", "al_slr", left, right, target]]
 
-def make_sar(meta: Meta, left: str, right: str, target: str) -> list[int]:
-  return make_alr(meta, "al_sar", left, right, target)
+def expand_sar(left: str, right: str, target: str) -> ExpandResult:
+  return [["alr", "al_sar", left, right, target]]
 
-def make_slli(meta: Meta, left: str, imm: str, target: str) -> list[int]:
-  return make_ali(meta, "al_sll", left, imm, target)
+def expand_slli(left: str, imm: str, target: str) -> ExpandResult:
+  return [["ali", "al_sll", left, imm, target]]
 
-def make_slri(meta: Meta, left: str, imm: str, target: str) -> list[int]:
-  return make_ali(meta, "al_slr", left, imm, target)
+def expand_slri(left: str, imm: str, target: str) -> ExpandResult:
+  return [["ali", "al_slr", left, imm, target]]
 
-def make_sari(meta: Meta, left: str, imm: str, target: str) -> list[int]:
-  return make_ali(meta, "al_sar", left, imm, target)
+def expand_sari(left: str, imm: str, target: str) -> ExpandResult:
+  return [["ali", "al_sar", left, imm, target]]
 
-def make_inc(meta: Meta, reg: str) -> list[int]:
-  return make_ali(meta, "al_plus", reg, "1", reg)
+def expand_inc(reg: str) -> ExpandResult:
+  return [["ali", "al_plus", reg, "1", reg]]
 
-def make_dec(meta: Meta, reg: str) -> list[int]:
-  return make_ali(meta, "al_minus", reg, "1", reg)
+def expand_dec(reg: str) -> ExpandResult:
+  return [["ali", "al_minus", reg, "1", reg]]
 
-def make_mov(meta: Meta, from_reg: str, to_reg: str) -> list[int]:
- return make_ali(meta, "al_plus", from_reg, "0", to_reg)
+def expand_mov(from_reg: str, to_reg: str) -> ExpandResult:
+  return [["ali", "al_plus", from_reg, "0", to_reg]]
 
-def make_spu(meta: Meta, reg: str) -> list[int]:
-  sp_reg = meta.options.stack_pointer
-  str_word = make_str(meta, reg, sp_reg)
-  inc_word = make_inc(meta, sp_reg)
-  return str_word + inc_word
+def expand_spu(reg: str) -> ExpandResult:
+  return [["str", reg, "__STACK_POINTER"]] + expand_inc("__STACK_POINTER")
 
-def make_spo(meta: Meta, reg: str) -> list[int]:
-  sp_reg = meta.options.stack_pointer
-  dec_word = make_dec(meta, sp_reg)
-  ldr_word = make_ldr(meta, reg, sp_reg)
-  return dec_word + ldr_word
+def expand_spo(reg: str):
+  return expand_dec("__STACK_POINTER") + [["ldr", reg, "__STACK_POINTER"]]
 
-def make_csr(meta: Meta, addr_reg: str) -> list[int]:
-  lpc_word = make_lpc(meta, meta.options.csr_scratch)
-  spu_word = make_spu(meta, meta.options.csr_scratch)
-  jpr_word = make_jpr(meta, addr_reg)
-  return lpc_word + spu_word + jpr_word
+def expand_csr(addr_reg: str):
+  return [["lpc", "__STACK_POINTER"]] + expand_spu("__STACK_POINTER") + [["jpr", addr_reg]]
 
-def make_csi(meta: Meta, addr_imm: str) -> list[int]:
-  lpc_word = make_lpc(meta, meta.options.csr_scratch)
-  spu_word = make_spu(meta, meta.options.csr_scratch)
-  jpi_word = make_jpi(meta, addr_imm)
-  return lpc_word + spu_word + jpi_word
+def expand_csi(addr_imm: str):
+  return [["lpc", "__STACK_POINTER"]] + expand_spu("__STACK_POINTER") + [["jpr", addr_imm]]
 
-def make_rsr(meta: Meta) -> list[int]:
-  spo_word = make_spo(meta, meta.options.csr_scratch)
-  jpr_word = make_jpr(meta, meta.options.csr_scratch)
-  return spo_word + jpr_word
+def expand_rsr():
+  return expand_spo("__STACK_POINTER") + [["jpr", "__CSR_SCRATCH"]]
 
-operations = {
-  "add": make_add,
-  "sub": make_sub,
-  "addi": make_addi,
-  "subi": make_subi,
-  "and": make_and,
-  "or": make_or,
-  "xor": make_xor,
-  "sll": make_sll,
-  "slr": make_slr,
-  "sar": make_sar,
-  "slli": make_slli,
-  "slri": make_slri,
-  "sari": make_sari,
-  "inc": make_inc,
-  "dec": make_dec,
-  "mov": make_mov,
-  "spu": make_spu,
-  "spo": make_spo,
-  "csr": make_csr,
-  "csi": make_csi,
-  "rsr": make_rsr,
+expansions: OpExpansionDict = {
+  "add": expand_add,
+  "sub": expand_sub,
+  "addi": expand_addi,
+  "subi": expand_subi,
+  "and": expand_and,
+  "or": expand_or,
+  "xor": expand_xor,
+  "sll": expand_sll,
+  "slr": expand_slr,
+  "sar": expand_sar,
+  "slli": expand_slli,
+  "slri": expand_slri,
+  "sari": expand_sari,
+  "inc": expand_inc,
+  "dec": expand_dec,
+  "mov": expand_mov,
+  "spu": expand_spu,
+  "spo": expand_spo,
+  "csr": expand_csr,
+  "csi": expand_csi,
+  "rsr": expand_rsr,
 }

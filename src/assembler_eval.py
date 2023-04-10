@@ -24,13 +24,13 @@ constants: dict[str, str] = {
   "f_sign": "3",
 }
 
-labels: dict[str, int] = {}
+Labels = dict[str, int]
 
 def check_size(bits: int, val: int) -> None:
   if val >= 2 ** bits:
     raise Exception(f"Value does not fit in {bits} bits: {val}")
 
-def eval_symbol(c: str) -> str:
+def eval_symbol(labels: Labels, c: str) -> str:
   if c in labels:
     return str(labels[c])
 
@@ -39,8 +39,9 @@ def eval_symbol(c: str) -> str:
 
   return c
 
-def eval_expr(expr: str, bits: int = 16) -> int:
-  expr = eval_symbol(expr)
+def eval_expr(labels: Labels, expr: str, bits: int = 16) -> int:
+  expr = expr.lower()
+  expr = eval_symbol(labels, expr)
   ret = eval(expr, labels.copy()) # eval as Python expr
   check_size(bits, ret)
   return ret
