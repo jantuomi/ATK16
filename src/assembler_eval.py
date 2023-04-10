@@ -5,8 +5,9 @@ constants: dict[str, str] = {
   "rb": "2",
   "rc": "3",
   "rd": "4",
-  "rf": "5",
-  "rg": "6",
+  "re": "5",
+  "rf": "6",
+  "rg": "7",
   # ALU instructions
   "al_plus": "0",
   "al_minus": "1",
@@ -25,6 +26,10 @@ constants: dict[str, str] = {
 
 labels: dict[str, int] = {}
 
+def check_size(bits: int, val: int) -> None:
+  if val >= 2 ** bits:
+    raise Exception(f"Value does not fit in {bits} bits: {val}")
+
 def eval_symbol(c: str) -> str:
   if c in labels:
     return str(labels[c])
@@ -34,6 +39,8 @@ def eval_symbol(c: str) -> str:
 
   return c
 
-def eval_expr(expr: str) -> int:
+def eval_expr(expr: str, bits: int = 16) -> int:
   expr = eval_symbol(expr)
-  return eval(expr, labels.copy()) # eval as Python expr
+  ret = eval(expr, labels.copy()) # eval as Python expr
+  check_size(bits, ret)
+  return ret

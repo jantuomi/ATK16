@@ -48,11 +48,7 @@ def parse(line: str) -> list[str]:
   return list(filter(lambda x: len(x) > 0, result))
 
 # 1st pass, gather labels, set options, eval operations
-
-options: dict[str, str] = {
-  "stack_pointer": "6", # RG
-  "csr_scratch": "5",   # RF
-}
+options = Options()
 address: int = 0
 
 for (lineNo, line) in enumerate(src_lines):
@@ -65,11 +61,14 @@ for (lineNo, line) in enumerate(src_lines):
       continue
     case "@label":
       labels[args[0]] = address
+      # todo bugi: 1st pass ei ota monirivisiä käskyjä huomioon
       continue
     case "@opt":
-      opt_name = args[0]
-      opt_value = constants.get(args[1], args[1])
-      options[opt_name] = opt_value
+      opt_name, opt_value = args
+      match opt_name:
+        case "stack_pointer": options.stack_pointer = opt_value
+        case "csr_scratch": options.csr_scratch = opt_value
+        case _: raise Exception("Unknown @opt: " + opt_name)
     case "@use":
       module_name, ops = args[0].split(":")
       ops_split = ops.split(",")
@@ -86,13 +85,6 @@ for (lineNo, line) in enumerate(src_lines):
 
 # 2nd pass
 
-# def make_spu(reg: str) -> list[int]:
-#   stack_pointer = options["stack_pointer"]
-#   reg = eval_symbol(reg)
-#   words_inc: list[int] = make_inc(stack_pointer, stack_pointer)
-#   words_str: list[int] = make_str(reg, stack_pointer)
-#   return words_inc + words_str
-
 address: int = 0
 nop = bytearray([0b1000_0000, 0])
 result = bytearray()
@@ -104,8 +96,12 @@ for (lineNo, line) in enumerate(src_lines):
   if line == "": continue
   keyword, *args = parse(line.lower())
 
+  meta = Meta(
+    address=address,
+    options=options
+  )
   if keyword in operations:
-    words = operations[keyword](address, *args)
+    words = operations[keyword](meta, *args)
   else:
     match keyword:
       # Directives
@@ -122,18 +118,20 @@ for (lineNo, line) in enumerate(src_lines):
         except:
           raise Exception(f"Invalid assembly at {infile_path}:{lineNo + 1}\n\n{line}")
 
-  if len(result) < 2 * address + 1:
-    result.extend((2 * address + 1 - len(result)) * nop)
-
   for (label, label_addr) in labels.items():
     if address == label_addr:
       print(f"{label}:")
 
+  line_printed = False
   for word in words:
-    print(f"{address:>08x}  0x{word:>04x}  {line}")
+    if len(result) < 2 * address + 1:
+      result.extend((2 * address + 1 - len(result)) * nop)
+
+    print(f"{address:>08x}  0x{word:>04x}  {line if not line_printed else '...'}")
     result[2 * address + 0] = ((word >> 8) & 0xff)
     result[2 * address + 1] = ((word >> 0) & 0xff)
     address += 1
+    line_printed = True
 
 with open(outfile_path, "wb") as f:
   f.write(result)
