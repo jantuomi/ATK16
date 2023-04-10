@@ -59,7 +59,7 @@ ucode = [
   not_branch([*fetch, R1_OE|PC_IE, US_RS, 0, 0, 0, 0]),
   # JPI 0110 XXXI IIII IIII
   not_branch([*fetch, IM_M|LI_OE|PC_IE, US_RS, 0, 0, 0, 0]),
-  # BR  0111 XFFR RRXX XXXX
+  # BRR  0111 XFFR RRXX XXXX
   branch([*fetch, US_RS, 0, 0, 0, 0, 0],
          [*fetch, R1_OE|PC_IE, US_RS, 0, 0, 0, 0]),
   # BRI 1000 XFFI IIII IIII
