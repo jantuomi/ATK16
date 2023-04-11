@@ -1,5 +1,5 @@
 from typing import Callable
-from assembler_eval import *
+from asm_eval import *
 from dataclasses import dataclass
 
 @dataclass

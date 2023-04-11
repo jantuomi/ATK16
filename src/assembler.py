@@ -2,8 +2,8 @@
 # Assemble ATK16 assembly to bytecode
 
 import sys
-from assembler_ops import *
-from assembler_eval import *
+from asm_ops import *
+from asm_eval import *
 from asm_pass1 import pass_1
 from asm_pass2 import pass_2
 from asm_pass3 import pass_3

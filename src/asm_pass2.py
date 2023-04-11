@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from assembler_ops import *
-from assembler_eval import *
+from asm_ops import *
+from asm_eval import *
 from asm_pass1 import *
 
 @dataclass

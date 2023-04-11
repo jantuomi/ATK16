@@ -1,4 +1,4 @@
-from assembler_ops import *
+from asm_ops import *
 
 def expand_add(left: str, right: str, target: str) -> ExpandResult:
   return [["alr", "al_plus", left, right, target]]

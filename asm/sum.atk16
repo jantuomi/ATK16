@@ -1,6 +1,5 @@
-; Program: sum two values and store the result in RAM
-
 @use ext_std:*
+; Program: sum two values and store the result in RAM
 
 ; ROM (and program execution) starts at offset 0x0
 @address 0x0
@@ -10,24 +9,24 @@
   0x8000            ; store ram offset for later memory access
 
 @label program
-  ldi RA 10         ; RA := 10
-  ldi RB 20         ; RB := 20
+  ldi 10 RA         ; RA := 10
+  ldi 20 RB         ; RB := 20
   add RA RB RC      ; RC := RA + RB
-  ldi RD @ram_offset ; store address of ram_offset in RD
+  ldi ram_offset RD ; store address of ram_offset in RD
   ldr RD RD         ; dereference ram_offset address
 @label debug
-  str RD RC         ; store RC in RAM
+  str RC RD         ; store RC in RAM
 
 ; Check that 10 + 20 = 30
   mov RC RA         ; RA := result of sum
-  ldi RB 30         ; RB := 30
+  ldi 30 RB         ; RB := 30
   sub RA RB RC      ; RC := RA - RB
-  bri zero @success  ; if result is zero, jump to success
+  bri zero success  ; if result is zero, jump to success
 
-  ldi RA 2          ; RA := 2 to signal failure
+  ldi 2 RA          ; RA := 2 to signal failure
   hlt
 
 ; Else
 @label success
-  ldi RA 1          ; RA := 1 to signal success
+  ldi 1 RA          ; RA := 1 to signal success
   hlt
