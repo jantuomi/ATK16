@@ -1,46 +1,66 @@
-@opt stack_pointer RG
-@opt csr_scratch RF
-
+@opt stack_pointer RF
+@opt csr_scratch RH
 @use ext_std:*
 
+; jump over data segment
+  jpi program
+
+; data segment
+@label ram_offset
+  0x8000
+
 @label program
-  ; call fibo subroutine with parameter 10
-  ldi RA 10
+; set up stack pointer to point to beginning of RAM
+  ldi ram_offset RA
+  ldr RA RF
+
+; call fibo subroutine with parameter 10
+  ldi 10 RA
   csi fibo
   hlt
 
 @label fibo
-  ; function fibo
-  ; parameters:
-  ;  RA   n : u16
-  ; return value:
-  ;  RA   fibo(n) : u16
+; function fibo
+; parameters:
+;  RA   n : u16
+; return value:
+;  RA   fibo(n) : u16
 
-  spu RB                 ; prelude
+; store RB, RC on stack
+  spu RB
   spu RC
-
-  subi RA 2 RA           ; if n < 2, return n
-  bri f_sign fibo_early
-
-  spu RD                 ; prelude
-
-  ldi RB 0               ; a = 0
-  ldi RC 1               ; b = 1
+; if n < 2, return n
+  subi RA 2 RA
+  bri sign fibo_early
+; store also RD on stack
+  spu RD
+; a = 0
+  ldi 0 RB
+; b = 1
+  ldi 1 RC
 @label fibo_loop
-  add RB RC RD           ; v = a + b
-  mov RC RB              ; a = b
-  mov RD RC              ; b = v
-  dec RA                 ; n -= 1
-  bri f_zero fibo_done   ; loop while n > 0
+; v = a + b
+  add RB RC RD
+; a = b
+  mov RC RB
+; b = v
+  mov RD RC
+; n -= 1
+  dec RA
+; loop while n > 0
+  bri zero fibo_done
   jpi fibo_loop
-
 @label fibo_early
+; restore used registers
   spo RC
   spo RB
+; return from subroutine
   rsr
 @label fibo_done
   mov RD RA
-  spo RD                 ; restore registers
+; restore used registers
+  spo RD
   spo RC
   spo RB
+; return from subroutine
   rsr

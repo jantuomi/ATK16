@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 @dataclass
 class Options:
-  stack_pointer = "rg"
-  csr_scratch = "rf"
+  stack_pointer = "rf"
+  csr_scratch = "rh"
 
 @dataclass
 class Meta:
@@ -37,7 +37,7 @@ def make_ali(meta: Meta, labels: Labels, alu_op: str, left: str, imm: str, targe
               alu_op_e
   return word
 
-def make_ldr(meta: Meta, labels: Labels, to_reg: str, addr_reg: str) -> int:
+def make_ldr(meta: Meta, labels: Labels, addr_reg: str, to_reg: str) -> int:
   """LDR 0010 TTTR RRXX XXXX"""
   to_reg_e = eval_expr(labels, to_reg, bits=3)
   addr_reg_e = eval_expr(labels, addr_reg, bits=3)
@@ -47,15 +47,15 @@ def make_ldr(meta: Meta, labels: Labels, to_reg: str, addr_reg: str) -> int:
   return word
 
 def make_str(meta: Meta, labels: Labels, from_reg: str, addr_reg: str) -> int:
-  """STR 0011 TTTR RRXX XXXX"""
+  """STR 0011 XXXL LLRR RXXX"""
   from_reg_e = eval_expr(labels, from_reg, bits=3)
   addr_reg_e = eval_expr(labels, addr_reg, bits=3)
   word = (0b0011 << 12) + \
-              (from_reg_e << 9) + \
-              (addr_reg_e << 6)
+              (addr_reg_e << 6) + \
+              (from_reg_e << 3)
   return word
 
-def make_ldi(meta: Meta, labels: Labels, to_reg: str, imm: str) -> int:
+def make_ldi(meta: Meta, labels: Labels, imm: str, to_reg: str) -> int:
   """LDI 0100 TTTI IIII IIII"""
   to_reg_e = eval_expr(labels, to_reg, bits=3)
   imm_e = eval_expr(labels, imm, bits=9)
@@ -75,6 +75,7 @@ def make_jpi(meta: Meta, labels: Labels, imm: str) -> int:
   """JPI 0110 XXXI IIII IIII"""
   imm_e = eval_expr(labels, imm, bits=9)
   imm_e = imm_e - meta.address - 1
+  imm_e = imm_e & (0b111111111)
   word = (0b0110 << 12) + \
               imm_e
   return word
@@ -93,6 +94,7 @@ def make_bri(meta: Meta, labels: Labels, flag_s: str, imm: str) -> int:
   flag_s_e = eval_expr(labels, flag_s, bits=2)
   imm_e = eval_expr(labels, imm, bits=9)
   imm_e = imm_e - meta.address - 1
+  imm_e = imm_e & (0b111111111)
   word = (0b1000 << 12) + \
               (flag_s_e << 9) + \
               imm_e

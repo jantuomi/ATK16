@@ -8,6 +8,7 @@ class Result3Line:
   line_num: int
   address: int
   parts: list[str]
+  original_parts: list[str]
 
 @dataclass
 class Result3:
@@ -35,6 +36,7 @@ def pass_3(result2: Result2) -> Result3:
           line_num=line.line_num,
           parts=line.parts,
           address=address,
+          original_parts=line.original_parts,
         ))
         address += 1
 

@@ -1,13 +1,13 @@
 constants: dict[str, str] = {
   # Registers
-  "rz": "0",
-  "ra": "1",
-  "rb": "2",
-  "rc": "3",
-  "rd": "4",
-  "re": "5",
-  "rf": "6",
-  "rg": "7",
+  "ra": "0",
+  "rb": "1",
+  "rc": "2",
+  "rd": "3",
+  "re": "4",
+  "rf": "5",
+  "rg": "6",
+  "rh": "7",
   # ALU instructions
   "al_plus": "0",
   "al_minus": "1",
@@ -18,10 +18,10 @@ constants: dict[str, str] = {
   "al_sar": "6",
   "al_sll": "7",
   # ALU flags
-  "f_carry": "0",
-  "f_overflow": "1",
-  "f_zero": "2",
-  "f_sign": "3",
+  "carry": "0",
+  "overflow": "1",
+  "zero": "2",
+  "sign": "3",
 }
 
 Labels = dict[str, int]

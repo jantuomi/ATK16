@@ -22,7 +22,7 @@
   mov RC RA         ; RA := result of sum
   ldi RB 30         ; RB := 30
   sub RA RB RC      ; RC := RA - RB
-  bri f_zero @success  ; if result is zero, jump to success
+  bri zero @success  ; if result is zero, jump to success
 
   ldi RA 2          ; RA := 2 to signal failure
   hlt

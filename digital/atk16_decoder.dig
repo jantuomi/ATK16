@@ -259,34 +259,6 @@
       <pos x="460" y="680"/>
     </visualElement>
     <visualElement>
-      <elementName>Splitter</elementName>
-      <elementAttributes>
-        <entry>
-          <string>Input Splitting</string>
-          <string>9,7</string>
-        </entry>
-        <entry>
-          <string>Output Splitting</string>
-          <string>16</string>
-        </entry>
-      </elementAttributes>
-      <pos x="400" y="600"/>
-    </visualElement>
-    <visualElement>
-      <elementName>Ground</elementName>
-      <elementAttributes>
-        <entry>
-          <string>rotation</string>
-          <rotation rotation="1"/>
-        </entry>
-        <entry>
-          <string>Bits</string>
-          <int>7</int>
-        </entry>
-      </elementAttributes>
-      <pos x="380" y="620"/>
-    </visualElement>
-    <visualElement>
       <elementName>Testcase</elementName>
       <elementAttributes>
         <entry>
@@ -298,6 +270,16 @@ C   0b0000001010011000 1     0     0  1    2    3    0</dataString>
         </entry>
       </elementAttributes>
       <pos x="120" y="160"/>
+    </visualElement>
+    <visualElement>
+      <elementName>BitExtender</elementName>
+      <elementAttributes>
+        <entry>
+          <string>inputBits</string>
+          <int>9</int>
+        </entry>
+      </elementAttributes>
+      <pos x="360" y="600"/>
     </visualElement>
   </visualElements>
   <wires>
@@ -347,7 +329,7 @@ C   0b0000001010011000 1     0     0  1    2    3    0</dataString>
     </wire>
     <wire>
       <p1 x="320" y="600"/>
-      <p2 x="400" y="600"/>
+      <p2 x="360" y="600"/>
     </wire>
     <wire>
       <p1 x="460" y="680"/>
@@ -360,10 +342,6 @@ C   0b0000001010011000 1     0     0  1    2    3    0</dataString>
     <wire>
       <p1 x="40" y="380"/>
       <p2 x="160" y="380"/>
-    </wire>
-    <wire>
-      <p1 x="380" y="620"/>
-      <p2 x="400" y="620"/>
     </wire>
     <wire>
       <p1 x="160" y="360"/>

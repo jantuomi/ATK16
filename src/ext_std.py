@@ -52,16 +52,25 @@ def expand_spu(reg: str) -> ExpandResult:
   return [["str", reg, "__STACK_POINTER"]] + expand_inc("__STACK_POINTER")
 
 def expand_spo(reg: str):
-  return expand_dec("__STACK_POINTER") + [["ldr", reg, "__STACK_POINTER"]]
+  return expand_dec("__STACK_POINTER") + [["ldr", "__STACK_POINTER", reg]]
 
 def expand_csr(addr_reg: str):
-  return [["lpc", "__STACK_POINTER"]] + expand_spu("__STACK_POINTER") + [["jpr", addr_reg]]
+  return [
+    ["lpc", "__CSR_SCRATCH"],
+    *expand_addi("__CSR_SCRATCH", "4", "__CSR_SCRATCH"),
+    *expand_spu("__CSR_SCRATCH"),
+    ["jpr", addr_reg]
+  ]
 
 def expand_csi(addr_imm: str):
-  return [["lpc", "__STACK_POINTER"]] + expand_spu("__STACK_POINTER") + [["jpr", addr_imm]]
-
+  return [
+    ["lpc", "__CSR_SCRATCH"],
+    *expand_addi("__CSR_SCRATCH", "4", "__CSR_SCRATCH"),
+    *expand_spu("__CSR_SCRATCH"),
+    ["jpi", addr_imm]
+  ]
 def expand_rsr():
-  return expand_spo("__STACK_POINTER") + [["jpr", "__CSR_SCRATCH"]]
+  return expand_spo("__CSR_SCRATCH") + [["jpr", "__CSR_SCRATCH"]]
 
 expansions: OpExpansionDict = {
   "add": expand_add,

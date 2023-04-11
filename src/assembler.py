@@ -67,7 +67,10 @@ for line in result4.lines:
   if len(result) < 2 * line.address + 1:
     result.extend((2 * line.address + 1 - len(result)) * nop)
 
-  print(f"{line.address:>08x}  0x{line.word:>04x}  {line.text}")
+  out_line = f"{line.address:>08x}  0x{line.word:>04x}  {line.text}"
+  out_spaces_n = (42 - len(out_line))
+  out_spaces = out_spaces_n * " " if out_spaces_n > 0 else 4 * " "
+  print(f"{out_line}{out_spaces}{line.original_text}")
   result[2 * line.address + 0] = ((line.word >> 8) & 0xff)
   result[2 * line.address + 1] = ((line.word >> 0) & 0xff)
 

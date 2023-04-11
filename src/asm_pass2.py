@@ -7,6 +7,7 @@ from asm_pass1 import *
 class Result2Line:
   line_num: int
   parts: list[str]
+  original_parts: list[str]
 
 @dataclass
 class Result2:
@@ -20,16 +21,17 @@ def pass_2(result1: Result1) -> Result2:
 
   for line in result1.lines:
     keyword, *args = line.parts
-    if not keyword.startswith("@"):
+    if keyword in result1.operations:
       fn = result1.operations[keyword]
       output: list[list[str]] = fn(*args)
     else:
       output = [line.parts]
 
-    for parts in output:
+    for (idx, parts) in enumerate(output):
       result_lines.append(Result2Line(
         line_num=line.line_num,
-        parts=parts
+        parts=parts,
+        original_parts=line.parts if idx == 0 else ["..."]
       ))
 
   return Result2(

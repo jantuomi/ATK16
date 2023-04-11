@@ -9,6 +9,7 @@ class Result4Line:
   address: int
   word: int
   text: str
+  original_text: str
 
 @dataclass
 class Result4:
@@ -35,6 +36,7 @@ def pass_4(result3: Result3) -> Result4:
 
     args = list(map(lambda a: translate_opt(a, result3.options), args))
     text = " ".join([keyword, *args])
+    original_text = " ".join(line.original_parts)
 
     if keyword in operations:
       fn = operations[keyword]
@@ -44,6 +46,7 @@ def pass_4(result3: Result3) -> Result4:
         address=line.address,
         word=word,
         text=text,
+        original_text=original_text,
       ))
     else:
       try:
@@ -52,9 +55,12 @@ def pass_4(result3: Result3) -> Result4:
           address=line.address,
           word=eval_expr(result3.labels, keyword),
           text=text,
+          original_text=original_text,
         ))
       except:
         raise Exception(f"Invalid assembly at {line.line_num + 1}\n\n{line}")
+
+    address += 1
 
   return Result4(
     operations=result3.operations,
