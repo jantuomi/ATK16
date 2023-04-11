@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import os.path
 from asm_ops import *
 from asm_eval import *
 
@@ -26,7 +27,8 @@ def pass_0(lines: list[str], file_name: str) -> Result0:
     match keyword:
       case "@include":
         asm_file_name = args[0]
-        with open(asm_file_name, "r") as f:
+        path = os.path.join(os.path.dirname(file_name), asm_file_name + ".atk16")
+        with open(path, "r") as f:
           for incl_line in f.readlines():
             result_lines.append(Result0Line(
               src_file=asm_file_name,

@@ -4,7 +4,7 @@
   "patterns": [
     {
       "name": "comment.documentation.atk16",
-      "match": ";\\?.*$"
+      "match": ";;;.*"
     },
     {
       "name": "comment.line.semicolon.atk16",

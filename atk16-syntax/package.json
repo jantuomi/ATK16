@@ -28,12 +28,19 @@
         "path": "./syntaxes/atk16.tmLanguage.json"
       }
     ],
-    "themes": [
-      {
-        "label": "ATK16 Color Theme",
-        "uiTheme": "vs-dark",
-        "path": "./themes/atk16-color-theme.json"
+    "configurationDefaults": {
+      "editor.tokenColorCustomizations": {
+        "[Default Dark+]": {
+          "textMateRules": [
+            {
+              "scope": "comment.documentation.atk16",
+              "settings": {
+                "fontStyle": "italic"
+              }
+            }
+          ]
+        }
       }
-    ]
+    }
   }
 }

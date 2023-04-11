@@ -1,4 +1,6 @@
 import importlib
+import sys
+import os.path
 from dataclasses import dataclass
 from asm_ops import *
 from asm_eval import *
@@ -33,6 +35,7 @@ def pass_1(result0: Result0) -> Result1:
       case "@use":
         module_name, ops = args[0].split(":")
         ops_split = ops.split(",")
+        sys.path.append(os.path.dirname(line.src_file))
         module = importlib.import_module(module_name)
         mod_expansions: OpExpansionDict = module.expansions
         for op in mod_expansions:

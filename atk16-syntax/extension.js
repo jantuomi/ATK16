@@ -135,21 +135,20 @@ async function findSubroutineInDocument(document, labelText) {
   for (let i = 0; i < document.lineCount; i++) {
     const line = document.lineAt(i);
     if (line.text.includes(`@label ${labelText}`)) {
-      let labelDefinition = '';
       for (let j = i + 1; j < document.lineCount; j++) {
         const docLine = document.lineAt(j);
-        const docCommentMatch = docLine.text.match(/;\? (.*)/);
+        const docCommentMatch = docLine.text.match(/;;;\s+(.*)/);
         if (docCommentMatch) {
           const lineText = docCommentMatch[1];
-          const parts = lineText.split(/\s/);
+          const parts = lineText.trim().split(/\s+/g);
           if (lineText.startsWith('subroutine')) {
-             name = parts[parts.length - 1];
+             name = parts[parts.length - 1].trim();
           } else if (lineText.startsWith('param')) {
-            const [_, reg, ...desc] = parts;
-            params.push([reg, desc.join(" ")])
+            const [_kw, reg, ...desc] = parts;
+            params.push([reg.trim(), desc.filter(a => a).join(" ")])
           } else if (lineText.startsWith('return')) {
-            const [_, reg, ...desc] = parts;
-            returns.push([reg, desc.join(" ")])
+            const [_kw, reg, ...desc] = parts;
+            returns.push([reg.trim(), desc.filter(a => a).join(" ")])
           } else {
             extra += `${lineText}\n`;
           }

@@ -19,9 +19,9 @@
   hlt
 
 @label fibo
-;? subroutine fibo
-;? param RA N
-;? return RA Nth fibonacci number
+;;; subroutine  fibo
+;;; param       RA    N
+;;; return      RA    Nth fibonacci number
 
 ; store RB, RC on stack
   spu RB
