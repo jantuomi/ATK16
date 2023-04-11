@@ -4,6 +4,7 @@
 import sys
 from asm_ops import *
 from asm_eval import *
+from asm_pass0 import pass_0
 from asm_pass1 import pass_1
 from asm_pass2 import pass_2
 from asm_pass3 import pass_3
@@ -49,7 +50,8 @@ def parse(line: str) -> list[str]:
   result.append(acc)
   return list(filter(lambda x: len(x) > 0, result))
 
-result1 = pass_1(src_lines)
+result0 = pass_0(src_lines, infile_path)
+result1 = pass_1(result0)
 result2 = pass_2(result1)
 result3 = pass_3(result2)
 result4 = pass_4(result3)

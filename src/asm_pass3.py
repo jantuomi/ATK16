@@ -6,6 +6,7 @@ from asm_pass2 import *
 @dataclass
 class Result3Line:
   line_num: int
+  src_file: str
   address: int
   parts: list[str]
   original_parts: list[str]
@@ -34,6 +35,7 @@ def pass_3(result2: Result2) -> Result3:
       case _:
         result_lines.append(Result3Line(
           line_num=line.line_num,
+          src_file=line.src_file,
           parts=line.parts,
           address=address,
           original_parts=line.original_parts,

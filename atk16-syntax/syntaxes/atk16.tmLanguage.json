@@ -3,12 +3,16 @@
   "name": "ATK16",
   "patterns": [
     {
+      "name": "comment.documentation.atk16",
+      "match": ";\\?.*$"
+    },
+    {
       "name": "comment.line.semicolon.atk16",
       "match": ";.*"
     },
     {
       "name": "keyword.control.directive.atk16",
-      "match": "@\\w+"
+      "match": "^@\\w+"
     },
     {
       "name": "variable.other.register.atk16",

@@ -6,12 +6,11 @@
   jpi program
 
 ; data segment
-@label ram_offset
-  0x8000
+@include ram_offset
 
 @label program
 ; set up stack pointer to point to beginning of RAM
-  ldi ram_offset RA
+  ldi ram_offset_addr RA
   ldr RA RF
 
 ; call fibo subroutine with parameter 10
@@ -20,11 +19,9 @@
   hlt
 
 @label fibo
-; function fibo
-; parameters:
-;  RA   n : u16
-; return value:
-;  RA   fibo(n) : u16
+;? subroutine fibo
+;? param RA N
+;? return RA Nth fibonacci number
 
 ; store RB, RC on stack
   spu RB

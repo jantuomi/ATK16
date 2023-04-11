@@ -2,10 +2,12 @@ import importlib
 from dataclasses import dataclass
 from asm_ops import *
 from asm_eval import *
+from asm_pass0 import *
 
 @dataclass
 class Result1Line:
   line_num: int
+  src_file: str
   parts: list[str]
 
 @dataclass
@@ -14,15 +16,13 @@ class Result1:
   options: Options
   operations: OpExpansionDict
 
-def pass_1(lines: list[str]) -> Result1:
+def pass_1(result0: Result0) -> Result1:
   options = Options()
   result_lines: list[Result1Line] = []
   operations: OpExpansionDict = default_expansions.copy()
 
-  for (line_num, line) in enumerate(lines):
-    line = line.split(";")[0].strip()
-    if line == "": continue
-    keyword, *args = line.lower().split()
+  for line in result0.lines:
+    keyword, *args = line.line.lower().split()
     match keyword:
       case "@opt":
         opt_name, opt_value = args
@@ -41,7 +41,8 @@ def pass_1(lines: list[str]) -> Result1:
             operations[op] = expansion
       case _:
         result_lines.append(Result1Line(
-          line_num=line_num,
+          src_file=line.src_file,
+          line_num=line.line_num,
           parts=[keyword, *args]
         ))
 

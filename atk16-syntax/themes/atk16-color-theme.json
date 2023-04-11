@@ -1,0 +1,41 @@
+{
+  "name": "ATK16",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1E1E1E",
+    "editor.foreground": "#D4D4D4",
+    "editor.lineHighlightBackground": "#2D2D30"
+  },
+  "tokenColors": [
+    {
+      "scope": "keyword.control.directive.atk16",
+      "settings": {}
+    },
+    {
+      "scope": "variable.parameter.register.atk16",
+      "settings": {}
+    },
+    {
+      "scope": "constant.numeric.binary.atk16",
+      "settings": {}
+    },
+    {
+      "scope": "keyword.control.instruction.atk16",
+      "settings": {}
+    },
+    {
+      "scope": "support.function.atk16",
+      "settings": {}
+    },
+    {
+      "scope": "entity.name.label.atk16",
+      "settings": {}
+    },
+    {
+      "scope": "comment.documentation.atk16",
+      "settings": {
+        "fontStyle": "italic"
+      }
+    }
+  ]
+}

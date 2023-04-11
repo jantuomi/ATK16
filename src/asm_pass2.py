@@ -6,6 +6,7 @@ from asm_pass1 import *
 @dataclass
 class Result2Line:
   line_num: int
+  src_file: str
   parts: list[str]
   original_parts: list[str]
 
@@ -30,6 +31,7 @@ def pass_2(result1: Result1) -> Result2:
     for (idx, parts) in enumerate(output):
       result_lines.append(Result2Line(
         line_num=line.line_num,
+        src_file=line.src_file,
         parts=parts,
         original_parts=line.parts if idx == 0 else ["..."]
       ))

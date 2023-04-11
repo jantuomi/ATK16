@@ -6,6 +6,7 @@ from asm_pass3 import *
 @dataclass
 class Result4Line:
   line_num: int
+  src_file: str
   address: int
   word: int
   text: str
@@ -43,6 +44,7 @@ def pass_4(result3: Result3) -> Result4:
       word = fn(meta, result3.labels, *args)
       result_lines.append(Result4Line(
         line_num=line.line_num,
+        src_file=line.src_file,
         address=line.address,
         word=word,
         text=text,
@@ -52,13 +54,14 @@ def pass_4(result3: Result3) -> Result4:
       try:
         result_lines.append(Result4Line(
           line_num=line.line_num,
+          src_file=line.src_file,
           address=line.address,
           word=eval_expr(result3.labels, keyword),
           text=text,
           original_text=original_text,
         ))
       except:
-        raise Exception(f"Invalid assembly at {line.line_num + 1}\n\n{line}")
+        raise Exception(f"Invalid assembly at {line.src_file}:{line.line_num + 1}\n\n{line}")
 
     address += 1
 

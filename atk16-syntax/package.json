@@ -1,13 +1,17 @@
 {
-  "name": "atk16-syntax-highlighting",
-  "displayName": "ATK16 Syntax Highlighting",
-  "description": "Syntax highlighting for ATK16 assembly language",
+  "name": "atk16-syntax",
+  "displayName": "ATK16 Syntax",
+  "description": "Syntax highlighting and support for ATK16 assembly language",
   "version": "0.0.1",
-  "publisher": "Jan Tuomi",
+  "publisher": "JanTuomi",
   "engines": {
     "vscode": "^1.60.0"
   },
   "categories": ["Programming Languages"],
+  "activationEvents": [
+    "onLanguage:atk16"
+  ],
+  "main": "./extension.js",
   "contributes": {
     "languages": [
       {
@@ -22,6 +26,13 @@
         "language": "atk16",
         "scopeName": "source.atk16",
         "path": "./syntaxes/atk16.tmLanguage.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "ATK16 Color Theme",
+        "uiTheme": "vs-dark",
+        "path": "./themes/atk16-color-theme.json"
       }
     ]
   }
