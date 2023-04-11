@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ATK16",
+  "patterns": [
+    {
+      "name": "comment.line.semicolon.atk16",
+      "match": ";.*"
+    },
+    {
+      "name": "keyword.control.directive.atk16",
+      "match": "@\\w+"
+    },
+    {
+      "name": "variable.other.register.atk16",
+      "match": "R\\w+"
+    },
+    {
+      "name": "constant.numeric.hex.atk16",
+      "match": "0x[0-9a-fA-F]+"
+    },
+    {
+      "name": "constant.numeric.binary.atk16",
+      "match": "0b[01]+"
+    },
+    {
+      "name": "constant.numeric.decimal.atk16",
+      "match": "[0-9]+"
+    },
+    {
+      "name": "entity.name.function.atk16",
+      "match": "\\w+(?=\\s*\\()"
+    },
+    {
+      "name": "entity.name.label.atk16",
+      "match": "\\w+(?=\\s*:)"
+    },
+    {
+      "name": "keyword.control.instruction.atk16",
+      "match": "^\\s+[a-zA-Z]+"
+    },
+    {
+      "name": "constant.language.flag.atk16",
+      "match": "\\b(carry|overflow|zero|sign)\\b"
+    }
+  ],
+  "repository": {},
+  "scopeName": "source.atk16"
+}
