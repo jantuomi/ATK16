@@ -7,10 +7,11 @@
   hlt_isr        ; 0x12 ISR2
   hlt_isr        ; 0x13 ISR3
   stack_segment  ; 0x14 Stack address
+  0x0            ; 0x15 Interrupt PC address (IPCA)
 
 @label hlt_isr
-  ldi 0x55 RA
-  hlt
+  ldi 0x55 RE
+  rti
 @label program_segment
 
 @address 0x0

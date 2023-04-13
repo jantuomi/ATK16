@@ -109,6 +109,11 @@ def make_lpc(meta: Meta, symbols: Symbols, target: str) -> int:
               (target_e << 9)
   return word
 
+def make_rti(meta: Meta, symbols: Symbols) -> int:
+  """RTI 1110 XXXX XXXX XXXX"""
+  word = (0b1110 << 12)
+  return word
+
 def make_hlt(meta: Meta, symbols: Symbols) -> int:
   """HLT 1111 XXXX XXXX XXXX"""
   word = (0b1111 << 12)
@@ -126,6 +131,7 @@ operations: OpWordDict = {
   "brr": make_brr,
   "bri": make_bri,
   "lpc": make_lpc,
+  "rti": make_rti,
   "hlt": make_hlt,
 }
 
@@ -147,6 +153,7 @@ default_expansions: OpExpansionDict = {
   "brr": lambda *args: expand_id("brr", *args),
   "bri": lambda *args: expand_id("bri", *args),
   "lpc": lambda *args: expand_id("lpc", *args),
+  "rti": lambda *args: expand_id("rti", *args),
   "hlt": lambda *args: expand_id("hlt", *args),
 }
 

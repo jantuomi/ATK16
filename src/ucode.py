@@ -12,26 +12,34 @@ if len(sys.argv) != 2:
 
 outfile_path = sys.argv[1]
 
-PC_CO   = 0b0000_0000_0000_0001
-PC_IE   = 0b0000_0000_0000_0010
-PC_OE   = 0b0000_0000_0000_0100
-MAR_IE  = 0b0000_0000_0000_1000
-MEM_IE  = 0b0000_0000_0001_0000
-MEM_OE  = 0b0000_0000_0010_0000
-RW_IE   = 0b0000_0000_0100_0000
-R1_OE   = 0b0000_0000_1000_0000
-R2_OE   = 0b0000_0001_0000_0000
-IR_IE   = 0b0000_0010_0000_0000
-IM_M    = 0b0000_0100_0000_0000
-LI_OE   = 0b0000_1000_0000_0000
-ALU_OE  = 0b0001_0000_0000_0000
-FR_IE   = 0b0010_0000_0000_0000
-HALT    = 0b0100_0000_0000_0000
-US_RS   = 0b1000_0000_0000_0000
+PC_CO   = 1 << 0
+PC_IE   = 1 << 1
+PC_OE   = 1 << 2
+MAR_IE  = 1 << 3
+MEM_IE  = 1 << 4
+MEM_OE  = 1 << 5
+RW_IE   = 1 << 6
+R1_OE   = 1 << 7
+R2_OE   = 1 << 8
+IR_IE   = 1 << 9
+IM_M    = 1 << 10
+LI_OE   = 1 << 11
+ALU_OE  = 1 << 12
+FR_IE   = 1 << 13
+HALT    = 1 << 14
+US_RS   = 1 << 15
+ISRA_OE = 1 << 16
+IM_DS   = 1 << 17
+IM_EN   = 1 << 18
+IPC_IE  = 1 << 19
+IPC_OE  = 1 << 20
+NOP5    = 1 << 21
+NOP6    = 1 << 22
+NOP7    = 1 << 23
 
 BRANCH_FLAG_STATES_N = 2
 UCODE_N: int = 2**3
-CONTROL_WORD_SIZE = 2
+CONTROL_WORD_SIZE = 3
 
 def not_branch(bs: list[int]) -> list[list[int]]:
   return BRANCH_FLAG_STATES_N * [bs]
@@ -71,12 +79,12 @@ ucode = [
   nop(),
   # NOP 1011 XXXX XXXX XXXX
   nop(),
-  # NOP 1100 XXXX XXXX XXXX
-  nop(),
-  # NOP 1101 XXXX XXXX XXXX
-  nop(),
-  # NOP 1110 XXXX XXXX XXXX
-  nop(),
+  # ISRP0 1100 XXXX XXXX XXXX
+  not_branch([IM_EN|PC_OE|IPC_IE, ISRA_OE|MAR_IE, MEM_OE|PC_IE, US_RS, 0, 0, 0, 0]),
+  # ISRP1 1101 XXXX XXXX XXXX
+  not_branch([IM_EN|PC_OE|IPC_IE, ISRA_OE|MAR_IE, MEM_OE|PC_IE, US_RS, 0, 0, 0, 0]),
+  # RTI   1110 XXXX XXXX XXXX
+  not_branch([*fetch, IM_DS|IPC_OE|PC_IE, US_RS, 0, 0, 0, 0]),
   # HLT 1111 XXXX XXXX XXXX
   not_branch([*fetch, HALT, 0, 0, 0, 0, 0]),
 ]
