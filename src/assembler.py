@@ -62,9 +62,9 @@ result = bytearray()
 result.extend(nop)
 
 for line in result4.lines:
-  for (label, label_addr) in result4.labels.items():
-    if line.address == label_addr:
-      print(f"{label}:")
+  for (symbol, symbol_value) in result4.symbols.items():
+    if line.address == symbol_value:
+      print(f"{symbol}:")
 
   if len(result) < 2 * line.address + 1:
     result.extend((2 * line.address + 1 - len(result)) * nop)

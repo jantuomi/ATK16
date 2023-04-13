@@ -24,24 +24,24 @@ constants: dict[str, str] = {
   "sign": "3",
 }
 
-Labels = dict[str, int]
+Symbols = dict[str, int]
 
 def check_size(bits: int, val: int) -> None:
   if val >= 2 ** bits:
-    raise Exception(f"Value does not fit in {bits} bits: {val}")
+    raise Exception(f"Value does not fit in {bits} bits: 0x{val:>04x}")
 
-def eval_symbol(labels: Labels, c: str) -> str:
-  if c in labels:
-    return str(labels[c])
+def eval_symbol(symbols: Symbols, c: str) -> str:
+  if c in symbols:
+    return str(symbols[c])
 
   if c in constants:
     return constants[c]
 
   return c
 
-def eval_expr(labels: Labels, expr: str, bits: int = 16) -> int:
+def eval_expr(symbols: Symbols, expr: str, bits: int = 16) -> int:
   expr = expr.lower()
-  expr = eval_symbol(labels, expr)
-  ret = eval(expr, labels.copy()) # eval as Python expr
+  expr = eval_symbol(symbols, expr)
+  ret = eval(expr, symbols.copy()) # eval as Python expr
   check_size(bits, ret)
   return ret

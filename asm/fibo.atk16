@@ -2,17 +2,11 @@
 @opt csr_scratch RH
 @use ext_std:*
 
-; jump over data segment
-  jpi program
+; bootstrap code (must be called to setup mandatory data)
+; will jump to label main
+@include bootstrap
 
-; data segment
-@include ram_offset
-
-@label program
-; set up stack pointer to point to beginning of RAM
-  ldi ram_offset_addr RA
-  ldr RA RF
-
+@label main
 ; call fibo subroutine with parameter 10
   ldi 10 RA
   csi fibo

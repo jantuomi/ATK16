@@ -16,31 +16,23 @@
     },
     {
       "name": "variable.other.register.atk16",
-      "match": "R\\w+"
+      "match": "\\bR[A-H]\\b"
     },
     {
       "name": "constant.numeric.hex.atk16",
-      "match": "0x[0-9a-fA-F]+"
+      "match": "\\b0x[0-9a-fA-F]+\\b"
     },
     {
       "name": "constant.numeric.binary.atk16",
-      "match": "0b[01]+"
+      "match": "\\b0b[01]+\\b"
     },
     {
       "name": "constant.numeric.decimal.atk16",
-      "match": "[0-9]+"
+      "match": "\\b[0-9]+\\b"
     },
     {
-      "name": "entity.name.function.atk16",
-      "match": "\\w+(?=\\s*\\()"
-    },
-    {
-      "name": "entity.name.label.atk16",
-      "match": "\\w+(?=\\s*:)"
-    },
-    {
-      "name": "keyword.control.instruction.atk16",
-      "match": "^\\s+[a-zA-Z]+"
+      "name": "keyword.control.symbol.atk16",
+      "match": "^\\s+[a-zA-Z_-]+"
     },
     {
       "name": "constant.language.flag.atk16",

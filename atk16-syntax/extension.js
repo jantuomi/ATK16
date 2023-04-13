@@ -85,9 +85,9 @@ class ATK16DefinitionProvider {
       }
     } else {
       const labelText = document.getText(range);
-      let labelLocation = await findLabelInDocument(document, labelText);
-      if (labelLocation) {
-        return labelLocation;
+      let definitionLocation = await findDefinitionInDocument(document, labelText);
+      if (definitionLocation) {
+        return definitionLocation;
       }
 
       // Search for labels in included files
@@ -104,9 +104,9 @@ class ATK16DefinitionProvider {
             const includedDocument = await vscode.workspace.openTextDocument(
               includedFilePath
             );
-            labelLocation = await findLabelInDocument(includedDocument, labelText);
-            if (labelLocation) {
-              return labelLocation;
+            definitionLocation = await findDefinitionInDocument(includedDocument, labelText);
+            if (definitionLocation) {
+              return definitionLocation;
             }
           }
         }
@@ -117,10 +117,10 @@ class ATK16DefinitionProvider {
   }
 }
 
-async function findLabelInDocument(document, labelText) {
+async function findDefinitionInDocument(document, labelText) {
   for (let i = 0; i < document.lineCount; i++) {
     const line = document.lineAt(i);
-    if (line.text.includes(`@label ${labelText}`)) {
+    if (line.text.includes(`@label ${labelText}`) || line.text.includes(`@let ${labelText}`)) {
       return new vscode.Location(document.uri, line.range.start);
     }
   }

@@ -4,6 +4,8 @@
   "description": "Syntax highlighting and support for ATK16 assembly language",
   "version": "0.0.1",
   "publisher": "JanTuomi",
+  "license": "MIT",
+  "repository": "",
   "engines": {
     "vscode": "^1.60.0"
   },

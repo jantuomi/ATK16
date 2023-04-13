@@ -48,6 +48,9 @@ def expand_dec(reg: str) -> ExpandResult:
 def expand_mov(from_reg: str, to_reg: str) -> ExpandResult:
   return [["ali", "al_plus", from_reg, "0", to_reg]]
 
+def expand_nop() -> ExpandResult:
+  return [["ali", "al_plus", "RA", "0", "RA"]]
+
 def expand_spu(reg: str) -> ExpandResult:
   return [["str", reg, "__STACK_POINTER"]] + expand_inc("__STACK_POINTER")
 
@@ -89,6 +92,7 @@ expansions: OpExpansionDict = {
   "inc": expand_inc,
   "dec": expand_dec,
   "mov": expand_mov,
+  "nop": expand_nop,
   "spu": expand_spu,
   "spo": expand_spo,
   "csr": expand_csr,
