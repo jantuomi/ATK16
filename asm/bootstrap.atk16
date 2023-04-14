@@ -1,7 +1,9 @@
 @let stack_segment 0x8000
 @let vector_table  0x10
+@let mmio_segment  0xE000
 @let terminal_addr 0xE000
 @let keyboard_addr 0xE001
+@let sprite_mem    0xE800
 
 @address vector_table
   keyboard_isr   ; 0x10 ISR0
