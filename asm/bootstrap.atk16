@@ -1,16 +1,33 @@
 @let stack_segment 0x8000
 @let vector_table  0x10
+@let terminal_addr 0xE000
+@let keyboard_addr 0xE001
 
 @address vector_table
-  hlt_isr        ; 0x10 ISR0
-  hlt_isr        ; 0x11 ISR1
-  hlt_isr        ; 0x12 ISR2
-  hlt_isr        ; 0x13 ISR3
+  hlt_isr             ; 0x10 ISR0
+  hlt_isr             ; 0x11 ISR1
+  hlt_isr             ; 0x12 ISR2
+  keyboard_isr        ; 0x13 ISR3 (keyboard)
   stack_segment  ; 0x14 Stack address
   0x0            ; 0x15 Interrupt PC address (IPCA)
+  terminal_addr  ; 0x16 Terminal peripheral address
+  keyboard_addr  ; 0x17 Keyboard peripheral address
 
 @label hlt_isr
   ldi 0x55 RE
+  hlt
+
+@label keyboard_isr
+  spu RA         ; use RA, RB
+  spu RB
+  ldi 0x17 RA    ; RA := 0x17 Keyboard peripheral address pointer
+  ldr RA RA      ; RA := 0xE001 Keyboard peripheral address deref
+  ldr RA RA      ; RA := <16-bit keyboard character code> from MMIO register
+  ldi 0x16 RB    ; RB := 0x16 Terminal peripheral address pointer
+  ldr RB RB      ; RB := 0xE000 Terminal peripheral address deref
+  str RA RB      ; terminal <- character code
+  spo RB         ; restore RA, RB
+  spo RA
   rti
 @label program_segment
 
