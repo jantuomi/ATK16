@@ -11,7 +11,7 @@
   hlt_isr        ; 0x12 ISR2
   hlt_isr        ; 0x13 ISR3
   stack_segment  ; 0x14 Stack address
-  0x0            ; 0x15 Interrupt PC address (IPCA)
+  0x0            ; 0x15 <unused>
   terminal_addr  ; 0x16 Terminal peripheral address
   keyboard_addr  ; 0x17 Keyboard peripheral address
 
