@@ -76,8 +76,8 @@ def make_jpi(meta: Meta, symbols: Symbols, imm: str) -> int:
   imm_e = eval_expr(symbols, imm, bits=9)
   imm_e = imm_e - meta.address - 1
   imm_e = imm_e & (0b111111111)
-  print("symbols:", symbols)
-  print(meta, imm, f"0x{imm_e:>0x}")
+  #print("symbols:", symbols)
+  #print(meta, imm, f"0x{imm_e:>0x}")
   word = (0b0110 << 12) + \
               imm_e
   return word

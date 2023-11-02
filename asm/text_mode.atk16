@@ -1,0 +1,17 @@
+@opt stack_pointer RF
+@opt csr_scratch RH
+@use ext_std:*
+
+; bootstrap code (must be called to setup mandatory data)
+; will jump to label main
+@include bootstrap
+
+@label main
+  ; set graphics mode to gr_text_mode
+  ldi vt_gr_mode_addr RA
+  ldr RA RA
+  ldi gr_text_mode RB
+  str RB RA
+
+@label loop
+  jpi loop

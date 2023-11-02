@@ -50,7 +50,7 @@ def pass_3(result2: Result2) -> Result3:
     rows_with_same_addr = list(filter(lambda l: l.address == result_line.address, result_lines))
     n = len(rows_with_same_addr)
     if n > 1:
-      formatted = "\n".join(map(lambda l: " ".join(l.parts), rows_with_same_addr))
+      formatted = format_overlapping_rows(rows_with_same_addr)
       raise Exception(f"Overlapping segments: address 0x{result_line.address:>04x} has conflicting definitions:\n{formatted}")
   return Result3(
     operations=result2.operations,
@@ -58,3 +58,20 @@ def pass_3(result2: Result2) -> Result3:
     lines=result_lines,
     symbols=symbols,
   )
+
+def format_overlapping_rows(rows: list[Result3Line]) -> str:
+  longest_val = 0
+  for row in rows:
+    joined = " ".join(row.parts)
+    if len(joined) > longest_val:
+      longest_val = len(joined)
+
+  first_col_width = longest_val + 4
+
+  results: list[str] = []
+  for row in rows:
+    joined = " ".join(row.parts)
+    result = joined + (first_col_width - len(joined)) * " " + f" ({row.src_file}:{row.line_num})"
+    results.append(result)
+
+  return "\n".join(results)
