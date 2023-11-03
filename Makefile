@@ -14,6 +14,10 @@ assemble:
 gen-ucode:
 	$(py) src/ucode.py $(out)
 
+# make gen-charmem out=out/charmem.bin
+gen-charmem:
+	$(py) src/charmem.py $(out)
+
 # make test
 test:
 	$(py) src/test_alu.py digital/atk16_alu.dig
