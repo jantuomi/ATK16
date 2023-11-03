@@ -40,6 +40,4 @@ def tokenize(line: str) -> list[str]:
   if len(cur) > 0:
     result.append(cur)
 
-  print(result)
-
   return [r for r in result if r != ""]
