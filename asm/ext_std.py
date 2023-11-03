@@ -72,8 +72,33 @@ def expand_csi(addr_imm: str):
     *expand_spu("__CSR_SCRATCH"),
     ["jpi", addr_imm]
   ]
+
 def expand_rsr():
   return expand_spo("__CSR_SCRATCH") + [["jpr", "__CSR_SCRATCH"]]
+
+
+def stack_stash(*rs: str):
+  result: ExpandResult = []
+  for r in rs:
+    result += expand_spu(r)
+
+  return result
+
+def stack_restore(*rs: str):
+  result: ExpandResult = []
+  for r in rs:
+    prefix = expand_spu(r)
+    result = prefix + result
+
+  return result
+
+def set_graphics_mode(mode: str):
+  return [
+    ["ldi", "vt_gr_mode_addr", "RA"],
+    ["ldr", "RA", "RA"],
+    ["ldi", mode, "RB"],
+    ["str", "RB", "RA"],
+  ]
 
 expansions: OpExpansionDict = {
   "add": expand_add,
@@ -98,4 +123,7 @@ expansions: OpExpansionDict = {
   "csr": expand_csr,
   "csi": expand_csi,
   "rsr": expand_rsr,
+  "stack_stash": stack_stash,
+  "stack_restore": stack_restore,
+  "set_graphics_mode": set_graphics_mode,
 }

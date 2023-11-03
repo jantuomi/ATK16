@@ -7,11 +7,9 @@
 @include bootstrap
 
 @label main
-  ; set graphics mode to gr_text_mode
-  ldi vt_gr_mode_addr RA
-  ldr RA RA
-  ldi gr_text_mode RB
-  str RB RA
+  ; set graphics mode to sprite mode
+  set_graphics_mode gr_sprite_mode
+  ; set_graphics_mode gr_text_mode
 
 @label loop
   jpi loop
