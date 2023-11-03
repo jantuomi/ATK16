@@ -9,29 +9,53 @@
 @label main
   ldi vt_text_mem RA
   ldr RA RA
-  ldi 4 RB   ; letter D
+  ldi 8 RB   ; letter H
   str RB RA
   addi RA 1 RA
   ldi 5 RB   ; letter E
   str RB RA
   addi RA 1 RA
-  ldi 1 RB   ; letter A
+  ldi 12 RB  ; letter L
   str RB RA
   addi RA 1 RA
-  ldi 4 RB   ; letter D
+  ldi 12 RB  ; letter L
   str RB RA
   addi RA 1 RA
-  ldi 2 RB   ; letter B
+  ldi 15 RB  ; letter O
   str RB RA
   addi RA 1 RA
-  ldi 5 RB   ; letter E
+  ldi 0 RB   ; space
   str RB RA
   addi RA 1 RA
-  ldi 5 RB   ; letter E
+  ldi 3 RB   ; letter C
   str RB RA
   addi RA 1 RA
-  ldi 6 RB   ; letter F
+  ldi 15 RB  ; letter O
   str RB RA
+  addi RA 1 RA
+  ldi 18 RB  ; letter R
+  str RB RA
+  addi RA 1 RA
+  ldi 5 RB  ; letter E
+  str RB RA
+  addi RA 1 RA
+  ldi 3 RB  ; letter C
+  str RB RA
+  addi RA 1 RA
+  ldi 1 RB  ; letter A
+  str RB RA
+  addi RA 1 RA
+  ldi 13 RB  ; letter M
+  str RB RA
+  addi RA 1 RA
+  ldi 16 RB  ; letter P
+  str RB RA
+  ldi offset RC
+  ldr RC RC
+  add RA RC RA
+  ; ldi 20 RB   ; letter A
+  ; str RB RA
+  ; addi RA 1 RA
 
   ; set graphics mode to sprite mode
   ; set_graphics_mode gr_sprite_mode
@@ -39,3 +63,6 @@
 
 @label loop
   jpi loop
+
+@label offset
+  51
