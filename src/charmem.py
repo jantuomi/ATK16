@@ -19,17 +19,19 @@ with open("charset.txt", "r") as f:
 header_chars = lines[0]
 
 charset: list[list[str]] = []
-CHAR_HEIGHT_BITS = 3
-CHAR_HEIGHT = 2 ** CHAR_HEIGHT_BITS
+
+CHAR_HEIGHT = 8
 CHAR_WIDTH = 8
 
-i = CHAR_HEIGHT
+i = 0
 while i < len(lines):
+  i += 1 # skip comment line
   char = lines[i:i+CHAR_HEIGHT]
   for row in char:
-    assert len(row) == CHAR_WIDTH
+    if len(row) != CHAR_WIDTH:
+      raise Exception(f"char row number {i} has width != {CHAR_WIDTH}: {len(row)}\n" + row + "\n" + "\n".join(char))
   charset.append(char)
-  i += CHAR_HEIGHT
+  i += CHAR_HEIGHT + 1
 
 CHAR_N = len(charset)
 

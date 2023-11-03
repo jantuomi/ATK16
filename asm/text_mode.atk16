@@ -8,12 +8,39 @@
 @include bootstrap
 
 @label main
-  cursor_to_line RA 1
-  put_string RA RB " HELLO CORECAMP"
-  cursor_to_line RA 2
-  put_string RA RB " BY JAN"
+  cursor_to_line RC 1
+  put_string RC RB " HELLO CORECAMP"
+  cursor_to_line RC 2
+  put_string RC RB " BY JAN"
+  cursor_to_line RC 4
+  put_string RC RB " > "
 
   set_graphics_mode gr_text_mode
 
 @label loop
   jpi loop
+
+@label keyboard_isr
+  stack_stash RA RB
+  ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
+  ldr RA RA               ; RA := Keyboard peripheral address deref
+  ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
+  ldi vt_term_pp_addr RB  ; RB := Terminal peripheral address pointer
+  ldr RB RB               ; RB := Terminal peripheral address deref
+
+  str RA RC
+  mov RA RD
+  addi RC 1 RC
+
+  subi RA 5 RA
+  subi RA 5 RA
+  bri zero keyboard_isr_clear
+  jpi keyboard_isr_end
+@label keyboard_isr_clear
+  ; cursor_to_line RC 4
+  ; put_string RC RB "                                                                "
+  cursor_to_line RC 4
+  put_string RC RB " > "
+@label keyboard_isr_end
+  stack_restore RA RB
+  rti

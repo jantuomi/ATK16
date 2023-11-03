@@ -18,6 +18,10 @@ gen-ucode:
 gen-charmem:
 	$(py) src/charmem.py $(out)
 
+# make convert-ttf in=font.ttf out=charset.txt
+convert-ttf:
+	$(py) src/convert_ttf.py $(in) $(out)
+
 # make test
 test:
 	$(py) src/test_alu.py digital/atk16_alu.dig

@@ -2,8 +2,7 @@ from asm_ops import *
 from ext_std import expand_addi
 
 def to_char_code(c: str):
-  if c == " " or c == "%SPACE": return 0
-  else: return ord(c) - 64
+  return ord(c)
 
 _counter = 0
 def get_unique_name(prefix: str):
@@ -17,7 +16,7 @@ def expand_put_char(cursor_reg: str, scratch_reg: str, c: str) -> ExpandResult:
   return [
     ["ldi", str(to_char_code(c)), scratch_reg],
     ["str", scratch_reg, cursor_reg],
-    *expand_addi("RA", "1", "RA"),
+    *expand_addi(cursor_reg, "1", cursor_reg),
   ]
 
 def expand_put_string(cursor_reg: str, scratch_reg: str, *rest: str) -> ExpandResult:
