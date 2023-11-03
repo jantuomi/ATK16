@@ -10,13 +10,13 @@
 @let vt_gr_mode_addr 0x17 ; Graphics mode setting address
 
 ; memory segments
-@let charmem_segment 0x0100
 @let stack_segment   0x8000
 @let mmio_segment    0xE000
 @let terminal_addr   0xE000
 @let keyboard_addr   0xE001
 @let gr_mode_addr    0xE002
-@let sprite_mem      0xE800
+@let sprite_mem      0xE800 ; note: sprite memory & text memory can use the same space
+@let text_mem        0xE800 ; since they are never used at the same time
 
 ; graphics mode settings
 @let gr_disabled_mode 0b00

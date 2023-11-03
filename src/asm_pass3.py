@@ -30,6 +30,9 @@ def pass_3(result2: Result2) -> Result3:
         address = eval_expr(symbols, args[0])
         continue
       case "@label":
+        label = args[0]
+        if label in symbols:
+          raise Exception(f"When defining label {label} as {address:>04x}, symbol {label} already defined as {symbols[label]:>04x}")
         symbols[args[0]] = address
         continue
       case "@let":
