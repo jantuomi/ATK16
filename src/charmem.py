@@ -43,7 +43,7 @@ def string_to_byte(input_string: str):
 
     # Check if the string contains only '0' or '1'
     if not all(c in '01' for c in binary_string):
-        raise ValueError("Input string must contain only spaces and '#' characters.")
+        raise ValueError("Input string must contain only spaces and '█' characters.")
 
     # Convert the binary string to an unsigned integer byte
     return int(binary_string[::-1], 2)

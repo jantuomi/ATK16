@@ -1,61 +1,19 @@
 @opt stack_pointer RF
 @opt csr_scratch RH
 @use ext_std:*
+@use ext_string_io:*
 
 ; bootstrap code (must be called to set up mandatory data)
 ; will jump to label main
 @include bootstrap
 
 @label main
-  ldi vt_text_mem RA
-  ldr RA RA
-  ldi 8 RB   ; letter H
-  str RB RA
-  addi RA 1 RA
-  ldi 5 RB   ; letter E
-  str RB RA
-  addi RA 1 RA
-  ldi 12 RB  ; letter L
-  str RB RA
-  addi RA 1 RA
-  ldi 12 RB  ; letter L
-  str RB RA
-  addi RA 1 RA
-  ldi 15 RB  ; letter O
-  str RB RA
-  addi RA 1 RA
-  ldi 0 RB   ; space
-  str RB RA
-  addi RA 1 RA
-  ldi 3 RB   ; letter C
-  str RB RA
-  addi RA 1 RA
-  ldi 15 RB  ; letter O
-  str RB RA
-  addi RA 1 RA
-  ldi 18 RB  ; letter R
-  str RB RA
-  addi RA 1 RA
-  ldi 5 RB  ; letter E
-  str RB RA
-  addi RA 1 RA
-  ldi 3 RB  ; letter C
-  str RB RA
-  addi RA 1 RA
-  ldi 1 RB  ; letter A
-  str RB RA
-  addi RA 1 RA
-  ldi 13 RB  ; letter M
-  str RB RA
-  addi RA 1 RA
-  ldi 16 RB  ; letter P
-  str RB RA
-  ldi offset RC
-  ldr RC RC
-  add RA RC RA
-  ; ldi 20 RB   ; letter A
-  ; str RB RA
-  ; addi RA 1 RA
+  cursor_to_line RA 1
+  put_char RA RB %SPACE
+  put_string RA RB HELLO CORECAMP
+  cursor_to_line RA 3
+  put_char RA RB %SPACE
+  put_string RA RB BY JAN
 
   ; set graphics mode to sprite mode
   ; set_graphics_mode gr_sprite_mode
@@ -63,6 +21,3 @@
 
 @label loop
   jpi loop
-
-@label offset
-  51

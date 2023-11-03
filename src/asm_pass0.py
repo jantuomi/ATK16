@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import os.path
 from asm_ops import *
 from asm_eval import *
+from tokenizer import *
 
 @dataclass
 class Result0Line:
@@ -19,7 +20,9 @@ def pass_0(lines: list[str], file_name: str) -> Result0:
   for (line_num, line) in enumerate(lines):
     line = line.split(";")[0].strip()
     if line == "": continue
-    keyword, *args = line.lower().split()
+
+    keyword, *args = tokenize(line)
+
     match keyword:
       case "@include":
         asm_file_name = args[0]

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from asm_ops import *
 from asm_eval import *
 from asm_pass0 import *
+from tokenizer import tokenize
 
 @dataclass
 class Result1Line:
@@ -24,7 +25,7 @@ def pass_1(result0: Result0) -> Result1:
   operations: OpExpansionDict = default_expansions.copy()
 
   for line in result0.lines:
-    keyword, *args = line.line.lower().split()
+    keyword, *args = tokenize(line.line)
     match keyword:
       case "@opt":
         opt_name, opt_value = args
