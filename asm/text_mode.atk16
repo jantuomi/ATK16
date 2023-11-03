@@ -2,11 +2,37 @@
 @opt csr_scratch RH
 @use ext_std:*
 
-; bootstrap code (must be called to setup mandatory data)
+; bootstrap code (must be called to set up mandatory data)
 ; will jump to label main
 @include bootstrap
 
 @label main
+  ldi vt_text_mem RA
+  ldr RA RA
+  ldi 4 RB   ; letter D
+  str RB RA
+  addi RA 1 RA
+  ldi 5 RB   ; letter E
+  str RB RA
+  addi RA 1 RA
+  ldi 1 RB   ; letter A
+  str RB RA
+  addi RA 1 RA
+  ldi 4 RB   ; letter D
+  str RB RA
+  addi RA 1 RA
+  ldi 2 RB   ; letter B
+  str RB RA
+  addi RA 1 RA
+  ldi 5 RB   ; letter E
+  str RB RA
+  addi RA 1 RA
+  ldi 5 RB   ; letter E
+  str RB RA
+  addi RA 1 RA
+  ldi 6 RB   ; letter F
+  str RB RA
+
   ; set graphics mode to sprite mode
   ; set_graphics_mode gr_sprite_mode
   set_graphics_mode gr_text_mode

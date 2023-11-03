@@ -8,6 +8,8 @@
 @let vt_term_pp_addr 0x15 ; Terminal peripheral address
 @let vt_kb_pp_addr   0x16 ; Keyboard peripheral address
 @let vt_gr_mode_addr 0x17 ; Graphics mode setting address
+@let vt_sprite_mem   0x18 ; Sprite memory address
+@let vt_text_mem     0x19 ; Text memory buffer address
 
 ; memory segments
 @let stack_segment   0x8000
@@ -34,6 +36,8 @@
   terminal_addr  ; 0x15
   keyboard_addr  ; 0x16
   gr_mode_addr   ; 0x17
+  sprite_mem     ; 0x18
+  text_mem       ; 0x19
 
 @label hlt_isr
   ldi 0x55 RE
