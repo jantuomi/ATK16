@@ -15,8 +15,10 @@
 @let terminal_addr   0xE000
 @let keyboard_addr   0xE001
 @let gr_mode_addr    0xE002
-@let sprite_mem      0xE800 ; note: sprite memory & text memory can use the same space
-@let text_mem        0xE800 ; since they are never used at the same time
+@let sprite_mem      0xE800
+@let text_mem        0xF800 ; to 0xFFFF
+; note: sprite memory & text memory can use the same space
+; since they are never used at the same time
 
 ; graphics mode settings
 @let gr_disabled_mode 0b00

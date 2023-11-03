@@ -21,7 +21,7 @@ header_chars = lines[0]
 charset: list[list[str]] = []
 CHAR_HEIGHT_BITS = 3
 CHAR_HEIGHT = 2 ** CHAR_HEIGHT_BITS
-CHAR_WIDTH = 5
+CHAR_WIDTH = 8
 
 i = CHAR_HEIGHT
 while i < len(lines):
@@ -34,11 +34,12 @@ while i < len(lines):
 CHAR_N = len(charset)
 
 TOTAL_BYTEARRAY_SIZE = CHAR_N * CHAR_HEIGHT
-print("TOTAL_BYTEARRAY_SIZE:", TOTAL_BYTEARRAY_SIZE)
 
 def string_to_byte(input_string: str):
     # Replace spaces with '0' and '#' with '1'
-    binary_string = input_string.replace(' ', '0').replace('#', '1') + "000"
+    binary_string = input_string.replace(' ', '0').replace('█', '1')
+
+    assert(len(input_string) == CHAR_WIDTH)
 
     # Check if the string contains only '0' or '1'
     if not all(c in '01' for c in binary_string):
