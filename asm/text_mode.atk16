@@ -9,11 +9,9 @@
 
 @label main
   cursor_to_line RA 1
-  put_char RA RB %SPACE
-  put_string RA RB HELLO CORECAMP
-  cursor_to_line RA 3
-  put_char RA RB %SPACE
-  put_string RA RB BY JAN
+  put_string RA RB " HELLO CORECAMP"
+  cursor_to_line RA 2
+  put_string RA RB " BY JAN"
 
   ; set graphics mode to sprite mode
   ; set_graphics_mode gr_sprite_mode

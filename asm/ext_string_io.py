@@ -13,6 +13,7 @@ def get_unique_name(prefix: str):
   return ret
 
 def expand_put_char(cursor_reg: str, scratch_reg: str, c: str) -> ExpandResult:
+  c = c.strip("\"")
   return [
     ["ldi", str(to_char_code(c)), scratch_reg],
     ["str", scratch_reg, cursor_reg],
@@ -21,6 +22,7 @@ def expand_put_char(cursor_reg: str, scratch_reg: str, c: str) -> ExpandResult:
 
 def expand_put_string(cursor_reg: str, scratch_reg: str, *rest: str) -> ExpandResult:
   string = " ".join(rest)
+  string = string.strip("\"")
   result: ExpandResult = []
   for c in string:
     result += expand_put_char(cursor_reg, scratch_reg, c)

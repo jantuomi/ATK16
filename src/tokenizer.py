@@ -2,6 +2,7 @@ def tokenize(line: str) -> list[str]:
   cur: str = ""
   result: list[str] = []
   is_py_expr = False
+  is_string = False
   idx = 0
   while idx < len(line):
     c = line[idx]
@@ -18,6 +19,16 @@ def tokenize(line: str) -> list[str]:
       cur = ""
     elif is_py_expr:
       cur += c
+    elif not is_string and c == "\"":
+      cur += "\""
+      is_string = True
+    elif is_string and c == "\"":
+      cur += "\""
+      is_string = False
+      result.append(cur)
+      cur = ""
+    elif is_string:
+      cur += c
     elif c == " " or c == "\t":
       result.append(cur)
       cur = ""
@@ -28,5 +39,7 @@ def tokenize(line: str) -> list[str]:
 
   if len(cur) > 0:
     result.append(cur)
+
+  print(result)
 
   return [r for r in result if r != ""]
