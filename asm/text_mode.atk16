@@ -9,9 +9,9 @@
 
 @label main
   cursor_to_line RC 1
-  put_string RC RB " HELLO CORECAMP"
+  put_string RC RB " HELLO #vaincoodijutut"
   new_line RC
-  put_string RC RB " »»»»»»» BY JAN"
+  put_string RC RB " »»»» BY @kal_jan »»»»"
   new_line RC
   new_line RC
   put_string RC RB " > "
@@ -22,32 +22,37 @@
   jpi loop
 
 @label keyboard_isr
-  stack_stash RA RB
+  stack_stash RA RB RD
   ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
   ldr RA RA               ; RA := Keyboard peripheral address deref
   ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
   ldi vt_term_pp_addr RB  ; RB := Terminal peripheral address pointer
   ldr RB RB               ; RB := Terminal peripheral address deref
 
-  mov RA RD
+  mov RA RD               ; RD := character code
+  subi RD 5 RD            ; if code == 10 (enter key), then run newline handler
   subi RD 5 RD
-  subi RD 5 RD
-  bri zero keyboard_isr_clear
-  mov RA RD
+  bri zero keyboard_isr_newline
+
+  mov RA RD               ; if code == 8 (backspace key), then run backspace handler
   subi RD 5 RD
   subi RD 3 RD
+
   bri zero keyboard_isr_backspace
-  str RA RC
+  str RA RC               ; else code is not special; write it to text buffer
   addi RC 1 RC
   jpi keyboard_isr_end
-@label keyboard_isr_clear
+
+@label keyboard_isr_newline
   new_line RC
   put_string RC RB " > "
-  addi RC 1 RC
+  jpi keyboard_isr_end
+
 @label keyboard_isr_backspace
   subi RC 1 RC
   put_char RC RB " "
   subi RC 1 RC
+
 @label keyboard_isr_end
-  stack_restore RA RB
+  stack_restore RA RB RD
   rti
