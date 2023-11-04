@@ -29,18 +29,25 @@
   ldi vt_term_pp_addr RB  ; RB := Terminal peripheral address pointer
   ldr RB RB               ; RB := Terminal peripheral address deref
 
+  mov RA RD
+  subi RD 5 RD
+  subi RD 5 RD
+  bri zero keyboard_isr_clear
+  mov RA RD
+  subi RD 5 RD
+  subi RD 3 RD
+  bri zero keyboard_isr_backspace
   str RA RC
   addi RC 1 RC
-
-  subi RA 5 RA
-  subi RA 5 RA
-  bri zero keyboard_isr_clear
   jpi keyboard_isr_end
 @label keyboard_isr_clear
-  ; cursor_to_line RC 4
-  ; put_string RC RB "                                                                "
   new_line RC
   put_string RC RB " > "
+  addi RC 1 RC
+@label keyboard_isr_backspace
+  subi RC 1 RC
+  put_char RC RB " "
+  subi RC 1 RC
 @label keyboard_isr_end
   stack_restore RA RB
   rti
