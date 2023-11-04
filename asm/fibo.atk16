@@ -1,4 +1,4 @@
-@opt stack_pointer RF
+@opt stack_pointer RG
 @opt csr_scratch RH
 @use ext_std:*
 

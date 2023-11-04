@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Options:
-  stack_pointer = "rf"
+  stack_pointer = "rg"
   csr_scratch = "rh"
 
 @dataclass

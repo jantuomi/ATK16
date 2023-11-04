@@ -1,0 +1,165 @@
+@opt stack_pointer RG
+@opt csr_scratch RH
+@use ext_std:*
+@include bootstrap
+@label py_consts
+; 0: 0
+  0
+; 1: ('*',)
+  0
+; 2: 63488
+  63488
+; 3: 72
+  72
+; 4: 63489
+  63489
+; 5: 69
+  69
+; 6: 63490
+  63490
+; 7: 76
+  76
+; 8: 63491
+  63491
+; 9: 63492
+  63492
+; 10: 79
+  79
+; 11: None
+  0
+@label atk_store
+  str RB RA
+  rsr
+@label atk_enable_text_mode
+  set_graphics_mode gr_text_mode
+  rsr
+@label main
+; PUSH_NULL None
+  ldi 0 RA
+  spu RA
+; LOAD_NAME 1
+  ldi atk_enable_text_mode RA
+  spu RA
+; PRECALL 0
+; CALL 0
+  spo RA
+  csr RA
+; POP_TOP None
+  spo RA
+; PUSH_NULL None
+  ldi 0 RA
+  spu RA
+; LOAD_NAME 2
+  ldi atk_store RA
+  spu RA
+; LOAD_CONST 2
+  ldi ${py_consts + 2} RA
+  ldr RA RA
+  spu RA
+; LOAD_CONST 3
+  ldi ${py_consts + 3} RA
+  ldr RA RA
+  spu RA
+; PRECALL 2
+; CALL 2
+  spo RB
+  spo RA
+  spo RC
+  csr RC
+; POP_TOP None
+  spo RA
+; PUSH_NULL None
+  ldi 0 RA
+  spu RA
+; LOAD_NAME 2
+  ldi atk_store RA
+  spu RA
+; LOAD_CONST 4
+  ldi ${py_consts + 4} RA
+  ldr RA RA
+  spu RA
+; LOAD_CONST 5
+  ldi ${py_consts + 5} RA
+  ldr RA RA
+  spu RA
+; PRECALL 2
+; CALL 2
+  spo RB
+  spo RA
+  spo RC
+  csr RC
+; POP_TOP None
+  spo RA
+; PUSH_NULL None
+  ldi 0 RA
+  spu RA
+; LOAD_NAME 2
+  ldi atk_store RA
+  spu RA
+; LOAD_CONST 6
+  ldi ${py_consts + 6} RA
+  ldr RA RA
+  spu RA
+; LOAD_CONST 7
+  ldi ${py_consts + 7} RA
+  ldr RA RA
+  spu RA
+; PRECALL 2
+; CALL 2
+  spo RB
+  spo RA
+  spo RC
+  csr RC
+; POP_TOP None
+  spo RA
+; PUSH_NULL None
+  ldi 0 RA
+  spu RA
+; LOAD_NAME 2
+  ldi atk_store RA
+  spu RA
+; LOAD_CONST 8
+  ldi ${py_consts + 8} RA
+  ldr RA RA
+  spu RA
+; LOAD_CONST 7
+  ldi ${py_consts + 7} RA
+  ldr RA RA
+  spu RA
+; PRECALL 2
+; CALL 2
+  spo RB
+  spo RA
+  spo RC
+  csr RC
+; POP_TOP None
+  spo RA
+; PUSH_NULL None
+  ldi 0 RA
+  spu RA
+; LOAD_NAME 2
+  ldi atk_store RA
+  spu RA
+; LOAD_CONST 9
+  ldi ${py_consts + 9} RA
+  ldr RA RA
+  spu RA
+; LOAD_CONST 10
+  ldi ${py_consts + 10} RA
+  ldr RA RA
+  spu RA
+; PRECALL 2
+; CALL 2
+  spo RB
+  spo RA
+  spo RC
+  csr RC
+; POP_TOP None
+  spo RA
+; LOAD_CONST 11
+  ldi ${py_consts + 11} RA
+  ldr RA RA
+  spu RA
+; RETURN_VALUE None
+@label keep_alive
+  jpi keep_alive
