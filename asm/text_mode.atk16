@@ -10,9 +10,10 @@
 @label main
   cursor_to_line RC 1
   put_string RC RB " HELLO CORECAMP"
-  cursor_to_line RC 2
+  new_line RC
   put_string RC RB " BY JAN"
-  cursor_to_line RC 4
+  new_line RC
+  new_line RC
   put_string RC RB " > "
 
   set_graphics_mode gr_text_mode
@@ -29,7 +30,6 @@
   ldr RB RB               ; RB := Terminal peripheral address deref
 
   str RA RC
-  mov RA RD
   addi RC 1 RC
 
   subi RA 5 RA
@@ -39,7 +39,7 @@
 @label keyboard_isr_clear
   ; cursor_to_line RC 4
   ; put_string RC RB "                                                                "
-  cursor_to_line RC 4
+  new_line RC
   put_string RC RB " > "
 @label keyboard_isr_end
   stack_restore RA RB

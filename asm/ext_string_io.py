@@ -1,5 +1,5 @@
 from asm_ops import *
-from ext_std import expand_addi
+from ext_std import *
 
 def to_char_code(c: str):
   return ord(c)
@@ -41,8 +41,16 @@ def expand_cursor_to_line(cursor_reg: str, line: int) -> ExpandResult:
     ["ldr", cursor_reg, cursor_reg],
   ]
 
+def expand_new_line(cursor_reg: str) -> ExpandResult:
+  return [
+    *expand_slri(cursor_reg, "6", cursor_reg),
+    *expand_addi(cursor_reg, "1", cursor_reg),
+    *expand_slli(cursor_reg, "6", cursor_reg),
+  ]
+
 expansions: OpExpansionDict = {
   "put_char": expand_put_char,
   "cursor_to_line": expand_cursor_to_line,
   "put_string": expand_put_string,
+  "new_line": expand_new_line,
 }
