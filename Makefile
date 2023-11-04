@@ -22,6 +22,10 @@ gen-charmem:
 convert-ttf:
 	$(py) src/convert_ttf.py $(in) $(out)
 
+# make dig-install bin=out/program.bin dig=digital/atk16_mem.dig label=MEM_ROM
+dig-install:
+	$(py) src/dig_install.py $(bin) $(dig) $(label)
+
 # make test
 test:
 	$(py) src/test_alu.py digital/atk16_alu.dig

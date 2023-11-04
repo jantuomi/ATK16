@@ -844,6 +844,20 @@
       </elementAttributes>
       <pos x="160" y="280"/>
     </visualElement>
+    <visualElement>
+      <elementName>VDD</elementName>
+      <elementAttributes>
+        <entry>
+          <string>rotation</string>
+          <rotation rotation="1"/>
+        </entry>
+        <entry>
+          <string>Bits</string>
+          <int>2</int>
+        </entry>
+      </elementAttributes>
+      <pos x="860" y="400"/>
+    </visualElement>
   </visualElements>
   <wires>
     <wire>
@@ -895,12 +909,12 @@
       <p2 x="580" y="840"/>
     </wire>
     <wire>
-      <p1 x="880" y="400"/>
-      <p2 x="900" y="400"/>
-    </wire>
-    <wire>
       <p1 x="460" y="400"/>
       <p2 x="480" y="400"/>
+    </wire>
+    <wire>
+      <p1 x="860" y="400"/>
+      <p2 x="900" y="400"/>
     </wire>
     <wire>
       <p1 x="480" y="720"/>
@@ -1117,10 +1131,6 @@
     <wire>
       <p1 x="880" y="320"/>
       <p2 x="880" y="360"/>
-    </wire>
-    <wire>
-      <p1 x="880" y="360"/>
-      <p2 x="880" y="400"/>
     </wire>
     <wire>
       <p1 x="560" y="700"/>

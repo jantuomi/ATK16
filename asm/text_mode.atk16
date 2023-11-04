@@ -11,7 +11,7 @@
   cursor_to_line RC 1
   put_string RC RB " HELLO CORECAMP"
   new_line RC
-  put_string RC RB " BY JAN"
+  put_string RC RB " »»»»»»» BY JAN"
   new_line RC
   new_line RC
   put_string RC RB " > "
