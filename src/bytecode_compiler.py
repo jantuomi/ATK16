@@ -85,6 +85,11 @@ def emit_serialize_const(const: Any):
   match const:
     case int(v):
       emit(f"  {v}")
+    case str(v):
+      if len(v) > 1:
+        raise Exception("Cannot serialize const string: " + v)
+
+      emit(f"  {ord(v[0])}")
     case _:
       print(f"warn: cannot serialize {type(const)} ({const}), emitting zero")
       emit("  0")

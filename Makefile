@@ -26,6 +26,10 @@ convert-ttf:
 dig-install:
 	$(py) src/dig_install.py $(bin) $(dig) $(label)
 
+# make compile-py-to-atk16 in=asm/test_py_src.py out=asm/test_py_src.atk16
+compile-py-to-atk16:
+	$(py) src/ast_compiler.py $(in) $(out)
+
 # make test
 test:
 	$(py) src/test_alu.py digital/atk16_alu.dig

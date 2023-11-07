@@ -1,0 +1,115 @@
+@opt stack_pointer RG
+@opt csr_scratch RH
+@use ext_std:*
+@let vector_table 0x10
+@let vt_ISR0 0x10
+@let vt_ISR1 0x11
+@let vt_ISR2 0x12
+@let vt_ISR3 0x13
+@let vt_stack_addr 0x14
+@let vt_term_pp_addr 0x15
+@let vt_kb_pp_addr 0x16
+@let vt_gr_mode_addr 0x17
+@let vt_sprite_mem 0x18
+@let vt_text_mem 0x19
+@let stack_segment 0x8000
+@let mmio_segment 0xE000
+@let terminal_addr 0xE000
+@let keyboard_addr 0xE001
+@let gr_mode_addr 0xE002
+@let sprite_mem 0xE800
+@let text_mem 0xF800
+@let gr_disabled_mode 0b00
+@let gr_text_mode 0b01
+@let gr_sprite_mode 0b10
+@address 0x0
+  ldi vt_stack_addr RA
+  ldr RA __STACK_POINTER
+  jpi program_segment
+@address vector_table
+  keyboard_isr
+  hlt_isr
+  hlt_isr
+  hlt_isr
+  stack_segment
+  terminal_addr
+  keyboard_addr
+  gr_mode_addr
+  sprite_mem
+  text_mem
+@label hlt_isr
+  ldi 0x55 RE
+  hlt
+@label keyboard_isr
+  spu RA
+  spu RB
+  ldi vt_kb_pp_addr RA
+  ldr RA RA
+  ldr RA RA
+  ldi vt_term_pp_addr RB
+  ldr RB RB
+  str RA RB
+  spo RB
+  spo RA
+  rti
+@label program_segment
+  ldi vt_gr_mode_addr RA
+  ldr RA RA
+  ldi gr_disabled_mode RB
+  str RB RA
+  jpi main
+@label TEXT_MODE
+  1
+@label int_0
+  23
+@label int_1
+  63488
+@label int_2
+  72
+@label int_3
+  63489
+@label int_4
+  69
+@label int_5
+  63490
+@label int_6
+  76
+@label int_7
+  63491
+@label int_8
+  76
+@label int_9
+  63492
+@label int_10
+  79
+@label main
+  ldi int_0 RA
+  ldr RA RB
+  spo RA
+  str RB RA
+  ldi int_1 RA
+  ldr RA RA
+  ldi int_2 RB
+  ldr RB RB
+  str RB RA
+  ldi int_3 RA
+  ldr RA RA
+  ldi int_4 RB
+  ldr RB RB
+  str RB RA
+  ldi int_5 RA
+  ldr RA RA
+  ldi int_6 RB
+  ldr RB RB
+  str RB RA
+  ldi int_7 RA
+  ldr RA RA
+  ldi int_8 RB
+  ldr RB RB
+  str RB RA
+  ldi int_9 RA
+  ldr RA RA
+  ldi int_10 RB
+  ldr RB RB
+  str RB RA
+  ldi 1 RA
