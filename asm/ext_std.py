@@ -12,14 +12,29 @@ def expand_addi(left: str, imm: str, target: str) -> ExpandResult:
 def expand_subi(left: str, imm: str, target: str) -> ExpandResult:
   return [["ali", "al_minus", left, imm, target]]
 
+def expand_not(reg: str, target: str) -> ExpandResult:
+  return [["alr", "al_xor", reg, "0xFFFF", target]]
+
+def expand_noti(imm: str, target: str) -> ExpandResult:
+  return [["ali", "al_xor", imm, "0xFFFF", target]]
+
 def expand_and(left: str, right: str, target: str) -> ExpandResult:
   return [["alr", "al_and", left, right, target]]
+
+def expand_andi(left: str, imm: str, target: str) -> ExpandResult:
+  return [["ali", "al_and", left, imm, target]]
 
 def expand_or(left: str, right: str, target: str) -> ExpandResult:
   return [["alr", "al_or", left, right, target]]
 
-def expand_xor(left: str, right: str, target: str) -> ExpandResult:
-  return [["alr", "al_xor", left, right, target]]
+def expand_ori(left: str, imm: str, target: str) -> ExpandResult:
+  return [["ali", "al_or", left, imm, target]]
+
+def expand_xor(left: str, imm: str, target: str) -> ExpandResult:
+  return [["alr", "al_xor", left, imm, target]]
+
+def expand_xori(left: str, right: str, target: str) -> ExpandResult:
+  return [["ali", "al_xor", left, right, target]]
 
 def expand_sll(left: str, right: str, target: str) -> ExpandResult:
   return [["alr", "al_sll", left, right, target]]
@@ -105,9 +120,14 @@ expansions: OpExpansionDict = {
   "sub": expand_sub,
   "addi": expand_addi,
   "subi": expand_subi,
+  "not": expand_not,
+  "noti": expand_noti,
   "and": expand_and,
+  "andi": expand_andi,
   "or": expand_or,
+  "ori": expand_ori,
   "xor": expand_xor,
+  "xori": expand_xori,
   "sll": expand_sll,
   "slr": expand_slr,
   "sar": expand_sar,

@@ -73,88 +73,44 @@
 
 ;; END BOOTSTRAP
 
-@label TEXT_MODE
-  1
-@label int_0
-  23
-@label int_1
-  63488
-@label int_2
-  72
-@label int_3
-  63489
-@label int_4
-  69
-@label int_5
-  63490
-@label int_6
-  76
-@label int_7
-  63491
-@label int_8
-  76
-@label int_9
-  63492
-@label int_10
-  79
+
 
 @label main
-; builtin call store [<ast.Constant object at 0x1045a3d90>, <ast.Name object at 0x1045a3d60>]
-  ldi int_0 RA
-  ldr RA RA
-  spu RA
-  spo RB
-  spo RA
-  str RB RA
-; builtin call store [<ast.Constant object at 0x1045a3c70>, <ast.Constant object at 0x1045a3c40>]
-  ldi int_1 RA
-  ldr RA RA
-  spu RA
-  ldi int_2 RA
-  ldr RA RA
-  spu RA
-  spo RB
-  spo RA
-  str RB RA
-; builtin call store [<ast.Constant object at 0x1045a3b50>, <ast.Constant object at 0x1045a3b20>]
-  ldi int_3 RA
-  ldr RA RA
-  spu RA
-  ldi int_4 RA
-  ldr RA RA
-  spu RA
-  spo RB
-  spo RA
-  str RB RA
-; builtin call store [<ast.Constant object at 0x1045a3a30>, <ast.Constant object at 0x1045a3a00>]
-  ldi int_5 RA
-  ldr RA RA
-  spu RA
-  ldi int_6 RA
-  ldr RA RA
-  spu RA
-  spo RB
-  spo RA
-  str RB RA
-; builtin call store [<ast.Constant object at 0x1045a3910>, <ast.Constant object at 0x1045a38e0>]
-  ldi int_7 RA
-  ldr RA RA
-  spu RA
-  ldi int_8 RA
-  ldr RA RA
-  spu RA
-  spo RB
-  spo RA
-  str RB RA
-; builtin call store [<ast.Constant object at 0x1045a37f0>, <ast.Constant object at 0x1045a37c0>]
-  ldi int_9 RA
-  ldr RA RA
-  spu RA
-  ldi int_10 RA
-  ldr RA RA
-  spu RA
-  spo RB
-  spo RA
-  str RB RA
-; builtin call asm [<ast.Constant object at 0x1045a2c20>]
+; <ast.If object at 0x1013c1e40>
+; <ast.Constant object at 0x1013c20b0>
   ldi 1 RA
+  spu RA
+  spo RA
+  addi RA 0 RA
+  bri zero If_false_branch_0
+; <ast.Constant object at 0x1013c2110>
+  ldi 2 RA
+  spu RA
+  jpi If_end_branch_1
+@label If_false_branch_0
+; <ast.Constant object at 0x1013c2170>
+  ldi 3 RA
+  spu RA
+@label If_end_branch_1
+; <ast.While object at 0x1013c2230>
+@label While_test_2
+; <ast.Constant object at 0x1013c2260>
+  ldi 3 RB
+  spu RB
+  spo RA
+  addi RA 0 RA
+  bri zero While_else_3
+; <ast.Constant object at 0x1013c22c0>
+  ldi 4 RB
+  spu RB
+; <ast.Break object at 0x1013c22f0>
+  jpi While_end_4
+; <ast.Constant object at 0x1013c2350>
+  ldi 5 RB
+  spu RB
+  jpi While_test_2
+@label While_else_3
+; <ast.Constant object at 0x1013c2470>
+  ldi 6 RB
+  spu RB
+@label While_end_4

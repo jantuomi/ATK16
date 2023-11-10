@@ -58,58 +58,28 @@
   ldi gr_disabled_mode RB
   str RB RA
   jpi main
-@label TEXT_MODE
-  1
-@label int_0
-  23
-@label int_1
-  63488
-@label int_2
-  72
-@label int_3
-  63489
-@label int_4
-  69
-@label int_5
-  63490
-@label int_6
-  76
-@label int_7
-  63491
-@label int_8
-  76
-@label int_9
-  63492
-@label int_10
-  79
 @label main
-  ldi int_0 RA
-  ldr RA RB
-  spo RA
-  str RB RA
-  ldi int_1 RA
-  ldr RA RA
-  ldi int_2 RB
-  ldr RB RB
-  str RB RA
-  ldi int_3 RA
-  ldr RA RA
-  ldi int_4 RB
-  ldr RB RB
-  str RB RA
-  ldi int_5 RA
-  ldr RA RA
-  ldi int_6 RB
-  ldr RB RB
-  str RB RA
-  ldi int_7 RA
-  ldr RA RA
-  ldi int_8 RB
-  ldr RB RB
-  str RB RA
-  ldi int_9 RA
-  ldr RA RA
-  ldi int_10 RB
-  ldr RB RB
-  str RB RA
   ldi 1 RA
+  addi RA 0 RA
+  bri zero If_false_branch_0
+  ldi 2 RA
+  spu RA
+  jpi If_end_branch_1
+@label If_false_branch_0
+  ldi 3 RA
+  spu RA
+@label If_end_branch_1
+@label While_test_2
+  ldi 3 RA
+  addi RA 0 RA
+  bri zero While_else_3
+  ldi 4 RB
+  spu RB
+  jpi While_end_4
+  ldi 5 RB
+  spu RB
+  jpi While_test_2
+@label While_else_3
+  ldi 6 RB
+  spu RB
+@label While_end_4
