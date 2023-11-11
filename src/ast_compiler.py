@@ -5,7 +5,7 @@ import sys
 import ast
 
 from dataclasses import dataclass
-from typing import Literal, Set, cast, Any, TypeAlias
+from typing import Literal, Set, cast, Any, TypeAlias, TypeVar
 from collections import OrderedDict
 from tokenizer import tokenize
 
@@ -16,8 +16,8 @@ if len(sys.argv) != 3:
 infile_path = sys.argv[1]
 outfile_path = sys.argv[2]
 
-Addr = int
 Label = str
+StackOffset = int
 RegChar = Literal["A", "B", "C", "D", "E", "F", "G", "H"]
 
 @dataclass
@@ -42,6 +42,38 @@ def format_asm_row(asm: str) -> str:
   else:
     return asm
 
+@dataclass
+class Frame:
+  names: list[str]
+  bindings: dict[str, Label | StackOffset]
+
+  def size(self) -> int:
+    return len(self.names)
+
+class FrameStack:
+  def __init__(self, stack: list[Frame] = []):
+    self.stack: list[Frame] = stack
+
+  def push(self, frame: Frame):
+    self.stack.append(frame)
+
+  def pop(self) -> Frame | None:
+    if len(self.stack) == 0: return None
+    return self.stack.pop()
+
+  def peek(self) -> Frame:
+    return self.stack[self.size() - 1]
+
+  def size(self) -> int:
+    return len(self.stack)
+
+  def total_offset(self) -> int:
+    total: int = 0
+    for frame in self.stack:
+      total += frame.size()
+
+    return total
+
 class Compiler(ast.NodeVisitor):
   def __init__(self):
     self.const_asm: list[str] = []
@@ -50,9 +82,9 @@ class Compiler(ast.NodeVisitor):
     ]
     self.function_def_asms: list[str] = []
     self.currently_emitting_asm_list = self.program_asm
-    self.stack_pointer_offset: int | None = None
-    self.bindings: dict[str, Label] = {}
-    self.call_depth: int = 0
+
+    self.frame_stack = FrameStack()
+
     self.unique_name_counter = 0
     self.latest_break_target: Label | None = None
 
@@ -64,15 +96,26 @@ class Compiler(ast.NodeVisitor):
     return ret
 
   def assign_const(self, name: str, value: int):
-    self.const_asm.append(f"@label {name}")
-    self.const_asm.append(f"  {value}")
-    self.bindings[name] = name
+    prev_currently_emitting_asm_list = self.currently_emitting_asm_list
+    self.currently_emitting_asm_list = self.const_asm
+
+    self.emit_label(name)
+    self.emit(f"{value}")
+
+    frame = self.frame_stack.peek()
+    frame.bindings[name] = name
+
+    self.currently_emitting_asm_list = prev_currently_emitting_asm_list
 
   def emit(self, asm: str):
     asm = asm.strip()
     asm = format_asm_row(asm)
 
     self.currently_emitting_asm_list.append(asm)
+
+  def emit_label(self, label_name: str):
+    label_name = label_name.lower()
+    self.emit(f"@label {label_name}")
 
   def alloc_reg(self) -> Reg:
     for reg in GENERIC_REGS:
@@ -89,7 +132,7 @@ class Compiler(ast.NodeVisitor):
     def __init__(self, compiler):
       self.compiler = compiler
 
-    def __enter__(self):
+    def __enter__(self) -> Reg:
       self.reg = self.compiler.alloc_reg()
       return self.reg
 
@@ -126,6 +169,7 @@ class Compiler(ast.NodeVisitor):
             self.emit(value)
 
           case other: raise Exception(f"asm: invalid args: {other}")
+
       case "store":
         if len(args) != 2:
           raise Exception("Invalid number of arguments to store: " + str(len(args)))
@@ -138,6 +182,26 @@ class Compiler(ast.NodeVisitor):
           self.emit(f"spo {arg2}")
           self.emit(f"spo {arg1}")
           self.emit(f"str {arg2} {arg1}")
+
+      case "load":
+        if len(args) != 1:
+          raise Exception("Invalid number of arguments to load: " + str(len(args)))
+
+        self.visit(args[0])
+
+        with self.allocated_reg() as arg:
+          self.emit(f"spo {arg}")
+          self.emit(f"ldr {arg} {arg}")
+          self.emit(f"spu {arg}")
+
+      case "ord":
+        if len(args) != 1:
+          raise Exception("Invalid number of arguments to ord: " + str(len(args)))
+
+        self.visit(args[0])
+
+      case other:
+        raise Exception(f"Unknown builtin: {other}")
 
   def eval_int_constant_and_spu(self, value: int):
     with self.allocated_reg() as reg:
@@ -153,36 +217,41 @@ class Compiler(ast.NodeVisitor):
 
   def visit_Module(self, node: ast.Module):
     stmts = node.body
-    stack_frame = self.collect_local_variables(stmts)
+    frame_names = self.collect_local_variables(stmts)
 
-    self.emit(f"; stack frame: {stack_frame}")
+    self.emit(f"; stack frame names: {frame_names}")
     # Move stack pointer to accommodate local variables
-    self.stack_pointer_offset = len(stack_frame)
 
-    self.emit(f"addi SP {self.stack_pointer_offset} SP")
+    # TODO instead of self.stack_frame_size, use a proper stack for frames.
+    # That way, we can restore the top-level stack frame when returning
 
-    prev_bindings = self.bindings
-    self.bindings: dict[str, Label] = prev_bindings.copy()
-    for idx, name in enumerate(stack_frame):
-      offset = len(stack_frame) - idx
-      offset_label = f"${{SP - {offset}}}"
-      self.bindings[name] = offset_label
+    frame_bindings: dict[str, Label | StackOffset] = {}
+    for idx, name in enumerate(frame_names):
+      offset = self.frame_stack.total_offset() + idx
+      frame_bindings[name] = offset
+
+    frame = Frame(
+      names = frame_names,
+      bindings = frame_bindings,
+    )
+    self.frame_stack.push(frame)
+    self.emit(f"addi SP {len(frame.names)} SP")
 
     for stmt in stmts:
       self.visit(stmt)
 
-    self.bindings = prev_bindings
-    self.emit(f"subi SP {self.stack_pointer_offset} SP")
+    self.frame_stack.pop()
+    self.emit(f"subi SP {len(frame.names)} SP")
 
   def visit_Expr(self, expr: ast.Expr):
-    # if self.call_depth == 0 and type(expr.value) != ast.Call:
-    #   self.emit("; NOP top-level expression")
-    #   return
+    if self.frame_stack.size == 1 and type(expr.value) != ast.Call:
+      self.emit("; NOP top-level expression")
+      return
 
     self.visit(expr.value)
 
   def visit_UnaryOp(self, node: ast.UnaryOp):
-    self.emit(f"; {node}")
+    self.emit(f"; {node.op}")
     self.visit(node.operand)
     match node.op:
       case ast.Not():
@@ -228,7 +297,7 @@ class Compiler(ast.NodeVisitor):
             self.emit(f"addi {reg} 0 {reg}")
             self.emit(f"bri zero {label_short_circuit}")
 
-          self.emit(f"@label {label_short_circuit}")
+          self.emit_label(label_short_circuit)
           self.emit(f"spu {reg}")
 
       case ast.Or():
@@ -243,14 +312,14 @@ class Compiler(ast.NodeVisitor):
             self.emit(f"subi {reg1} 1 {reg2}")
             self.emit(f"bri carry {label_short_circuit}")
 
-          self.emit(f"@label {label_short_circuit}")
+          self.emit_label(label_short_circuit)
           self.emit(f"spu {reg1}")
 
       case other:
         raise NotImplementedError(f"Unhandled BoolOp: {other}")
 
   def visit_BinOp(self, node: ast.BinOp):
-    self.emit(f"; {node}")
+    self.emit(f"; {node.op}")
 
     self.emit(f"; BinOp lhs {node}")
     self.visit(node.left)
@@ -315,12 +384,12 @@ class Compiler(ast.NodeVisitor):
       self.visit(true_branch_stmt)
 
     self.emit(f"jpi {label_end}")
-    self.emit(f"@label {label_false}")
+    self.emit_label(label_false)
 
     for false_branch_stmt in node.orelse:
       self.visit(false_branch_stmt)
 
-    self.emit(f"@label {label_end}")
+    self.emit_label(label_end)
 
   def visit_While(self, node: ast.While):
     self.emit(f"; {node}")
@@ -333,7 +402,7 @@ class Compiler(ast.NodeVisitor):
     self.latest_break_target = label_end
 
     with self.allocated_reg() as reg:
-      self.emit(f"@label {label_test}")
+      self.emit_label(label_test)
       self.visit(node.test)
       self.emit(f"spo {reg}")
       self.emit(f"addi {reg} 0 {reg}")
@@ -344,14 +413,18 @@ class Compiler(ast.NodeVisitor):
 
     self.emit(f"jpi {label_test}")
 
-    self.emit(f"@label {label_else}")
+    self.emit_label(label_else)
 
     for else_stmt in node.orelse:
       self.visit(else_stmt)
 
-    self.emit(f"@label {label_end}")
+    self.emit_label(label_end)
 
     self.latest_break_target = prev_break_target
+
+  def visit_Pass(self, node: ast.Pass):
+    self.emit(f"; {node}")
+    pass
 
   def visit_Break(self, node: ast.Break):
     self.emit(f"; {node}")
@@ -386,6 +459,7 @@ class Compiler(ast.NodeVisitor):
     return list(set(symbols))
 
   def visit_FunctionDef(self, node: ast.FunctionDef):
+    prev_currently_emitting_asm_list = self.currently_emitting_asm_list
     self.currently_emitting_asm_list = self.function_def_asms
     self.emit(f"; {node}")
 
@@ -393,50 +467,69 @@ class Compiler(ast.NodeVisitor):
     fn_params = [str(param.arg) for param in node.args.args]
     fn_stmts = node.body
 
-    # Add a "return None" to the end to make sure there the function returns
+    # Add a "return None" to the end to make sure the function returns
     if len(fn_stmts) == 0 or type(fn_stmts[len(fn_stmts) - 1]) != ast.Return:
       fn_stmts.append(ast.Return(value=None))
 
     if len(node.args.kwonlyargs) > 0 or len(node.args.posonlyargs) > 0 or len(node.args.kw_defaults) > 0 or len(node.args.defaults) > 0:
       raise Exception("Only simple positional args are supported for now in function definitions.")
 
-    self.emit(f"@label {fn_name}")
-    stack_frame = fn_params + self.collect_local_variables(fn_stmts)
-    self.emit(f"; stack frame: {stack_frame}")
+    self.emit_label(fn_name)
+    return_address_name = self.get_unique_name("return_address")
+    local_var_names = self.collect_local_variables(fn_stmts)
+    frame_names = [return_address_name] + fn_params + local_var_names
+    self.emit(f"; stack frame names: {frame_names}")
+
     # Move stack pointer to accommodate local variables
-    self.stack_pointer_offset = len(stack_frame) - len(fn_params)
+    self.emit(f"addi SP {len(local_var_names)} SP")
 
-    self.emit(f"addi SP {self.stack_pointer_offset} SP")
+    frame_bindings: dict[str, Label | StackOffset] = {}
+    for idx, name in enumerate(frame_names):
+      offset = self.frame_stack.total_offset() + idx
+      frame_bindings[name] = offset
 
-    prev_bindings = self.bindings
-    self.bindings: dict[str, Label] = prev_bindings.copy()
-    for idx, name in enumerate(stack_frame):
-      offset = len(stack_frame) - idx
-      offset_label = f"${{SP - {offset}}}"
-      self.bindings[name] = offset_label
+    frame = Frame(
+      names = frame_names,
+      bindings = frame_bindings
+    )
+    self.frame_stack.push(frame)
 
     for stmt in fn_stmts:
       self.visit(stmt)
 
-    self.bindings = prev_bindings
-    self.currently_emitting_asm_list = self.program_asm
+    self.frame_stack.pop()
+    self.currently_emitting_asm_list = prev_currently_emitting_asm_list
 
   def visit_Return(self, node: ast.Return):
     self.emit(f"; {node}")
-    if self.stack_pointer_offset is None:
-      raise Exception("Encountered Return outside a function def context")
+
+    if self.frame_stack.size() <= 1:
+      raise Exception("Encountered return in the top level stack frame")
+
+    frame = self.frame_stack.peek()
 
     ret = node.value
 
-    if ret is not None:
-      self.visit(ret)
-    else:
-      with self.allocated_reg() as reg:
-        self.emit(f"ldi 0 {reg}")
-        self.emit(f"spu {reg}")
+    with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
+      print(frame.names)
+      ret_addr_offset = self.frame_stack.total_offset() - frame.size()
+      self.emit(f"ldi vt_stack_addr {reg1}") # vector table address of stack segment address
+      self.emit(f"ldr {reg1} {reg1}") # stack segment address
+      self.emit(f"ldi {ret_addr_offset} {reg2}") # stack offset
+      self.emit(f"add {reg1} {reg2} {reg1}") # stack address of return address = stack segment start + stack offset
 
-    self.emit(f"subi SP {self.stack_pointer_offset} SP")
-    self.emit("rsr")
+      if ret is not None:
+        self.visit(ret)
+        self.emit(f"spo {reg2}")
+      else:
+        self.emit(f"ldi 0 {reg2}")
+
+      self.emit(f"mov {reg1} SP") # reset stack pointer to return address position (i.e. start of stack frame)
+      self.emit(f"ldr {reg1} {reg1}") # return address
+
+      self.emit(f"spu {reg2}")
+      self.emit(f"; return from function")
+      self.emit(f"jpr {reg1}")
 
   def visit_Call(self, node: ast.Call):
     self.emit(f"; {node}")
@@ -445,42 +538,88 @@ class Compiler(ast.NodeVisitor):
       case ast.Attribute(ast.Name(id="atk16"), attr):
         self.emit_builtin_call(attr, node.args)
       case ast.Name(name):
-        # Evaluate args before call
+        self.emit(f"; Call function {name}")
+
+        # Reserve a stack slot for the return address
+        with self.allocated_reg() as reg:
+          self.emit(f"ldi 0 {reg}")
+          self.emit(f"spu {reg}")
+
+        # Evaluate args before call, pushing them to stack
         for arg in node.args:
           self.visit(arg)
 
-        self.emit(f"csi {name}")
+        with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
+          self.emit("; set up return address and jump to subroutine")
+          self.emit(f"subi SP {len(node.args) + 1} {reg1}")
+          self.emit(f"lpc {reg2}")
+          self.emit(f"addi {reg2} 3 {reg2}")
+          self.emit(f"str {reg2} {reg1}")
+          self.emit(f"jpi {name}")
+
       case other:
         raise NotImplementedError(f"Unhandled Call: {other}")
+
+  def resolve_name(self, name: str) -> Label | StackOffset:
+    frames = FrameStack(self.frame_stack.stack.copy())
+
+    while frames.size() > 0:
+      frame = cast(Frame, frames.pop())
+
+      if name in frame.bindings:
+        addr = frame.bindings[name]
+        match addr:
+          case Label(value):
+            return value
+          case StackOffset(value):
+            return value
+
+    raise Exception(f"{name} is unbound")
 
   def visit_Name(self, node: ast.Name):
     self.emit(f"; {node} ({node.id})")
 
-    name = node.id
-    if name not in self.bindings:
-      raise Exception(f"{name} is unbound")
+    name = node.id.lower()
+    addr = self.resolve_name(name)
 
-    addr = self.bindings[name]
-    with self.allocated_reg() as reg:
-      self.emit(f"ldi {addr} {reg}")
-      self.emit(f"ldr {reg} {reg}")
-      self.emit(f"spu {reg}")
+    with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
+      match addr:
+        case Label(label):
+          self.emit(f"ldi {label} {reg1}")
+        case StackOffset(offset):
+          self.emit(f"ldi vt_stack_addr {reg1}")
+          self.emit(f"ldr {reg1} {reg1}")
+          self.emit(f"ldi {offset} {reg2}")
+          self.emit(f"add {reg1} {reg2} {reg1}")
+        case other:
+          raise Exception(f"Unsupported addr value: {other}")
+
+      self.emit(f"ldr {reg1} {reg1}")
+      self.emit(f"spu {reg1}")
 
   def visit_Assign(self, node: ast.Assign):
+    self.emit(f"; {node}")
+
     targets = node.targets
     value = node.value
     match targets:
       case [ast.Name(name)]:
-        if name not in self.bindings:
-          raise Exception(f"{name} is not in bindings. Bindings:\n{self.bindings}")
+        offset = self.resolve_name(name)
 
-        self.visit(value)
-        addr = self.bindings[name]
+        if type(offset) != StackOffset:
+          raise Exception(f"Invalid address {offset} for name {name}. Can only assign to stack offsets.")
+
+        self.emit(f"; assigning {name} to stack segment + offset {offset}")
 
         with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
-          self.emit(f"spo {reg1}")
-          self.emit(f"ldi {addr} {reg2}")
-          self.emit(f"str {reg1} {reg2}")
+          self.visit(value)
+          self.emit(f"ldi vt_stack_addr {reg1}")
+          self.emit(f"ldr {reg1} {reg1}")
+          self.emit(f"ldi {offset} {reg2}")
+          self.emit(f"add {reg1} {reg2} {reg1}") # address
+          self.emit(f"spo {reg2}") # value
+          self.emit(f"str {reg2} {reg1}")
+
       case other:
         raise Exception(f"Unsupported assign targets: {other}")
 
@@ -501,7 +640,7 @@ class Compiler(ast.NodeVisitor):
         value=ast.Constant(value) # TODO: constant folding
       ):
         if type(value) == int:
-          self.assign_const(name, value)
+          self.assign_const(name.lower(), value)
           return
 
     raise NotImplementedError("Unhandled AnnAssign:\n" + ast.dump(node, indent=4))

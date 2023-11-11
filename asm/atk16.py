@@ -20,3 +20,7 @@ def call_inline(expr: T) -> T:
 def asm(asm: str):
     """Inject ATK16 assembly `asm` into the compiled output."""
     return NotImplemented
+
+def ord(char: Char) -> int:
+    """Convert char to int"""
+    return NotImplemented
