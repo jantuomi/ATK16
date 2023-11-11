@@ -31,7 +31,7 @@
 
 @address 0x0
   ldi vt_stack_addr RA
-  ldr RA __STACK_POINTER
+  ldr RA SP
   jpi program_segment
 
 @address vector_table

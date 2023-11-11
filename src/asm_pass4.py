@@ -21,8 +21,8 @@ class Result4:
 
 def translate_opt(arg: str, options: Options) -> str:
   match arg:
-    case "__STACK_POINTER": return options.stack_pointer
-    case "__CSR_SCRATCH": return options.csr_scratch
+    case "SP": return options.stack_pointer
+    case "CSR_SCRATCH": return options.csr_scratch
     case _: return arg
 
 def pass_4(result3: Result3) -> Result4:

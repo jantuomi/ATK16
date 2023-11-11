@@ -24,7 +24,7 @@
 @let gr_sprite_mode 0b10
 @address 0x0
   ldi vt_stack_addr RA
-  ldr RA __STACK_POINTER
+  ldr RA SP
   jpi program_segment
 @address vector_table
   keyboard_isr
@@ -58,28 +58,28 @@
   ldi gr_disabled_mode RB
   str RB RA
   jpi main
+@label func
+  addi SP 1 SP
+  ldi ${SP - 3} RA
+  ldr RA RA
+  ldi ${SP - 1} RB
+  str RA RB
+  ldi ${SP - 1} RA
+  ldr RA RA
+  ldi ${SP - 1} RB
+  ldr RB RB
+  add RA RB RA
+  spu RA
+  subi SP 1 SP
+  rsr
 @label main
+  addi SP 1 SP
   ldi 1 RA
-  addi RA 0 RA
-  bri zero If_false_branch_0
-  ldi 2 RA
   spu RA
-  jpi If_end_branch_1
-@label If_false_branch_0
   ldi 3 RA
   spu RA
-@label If_end_branch_1
-@label While_test_2
-  ldi 3 RA
-  addi RA 0 RA
-  bri zero While_else_3
-  ldi 4 RB
-  spu RB
-  jpi While_end_4
-  ldi 5 RB
-  spu RB
-  jpi While_test_2
-@label While_else_3
-  ldi 6 RB
-  spu RB
-@label While_end_4
+  csi func
+  spo RA
+  ldi ${SP - 1} RB
+  str RA RB
+  subi SP 1 SP

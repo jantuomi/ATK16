@@ -1,4 +1,4 @@
-def tokenize(line: str) -> list[str]:
+def tokenize(line: str, retain_curlies = False) -> list[str]:
   cur: str = ""
   result: list[str] = []
   is_py_expr = False
@@ -8,6 +8,8 @@ def tokenize(line: str) -> list[str]:
     c = line[idx]
     if not is_py_expr and c == "$":
       is_py_expr = True
+      if retain_curlies:
+        cur += "${"
       idx += 1
     elif is_py_expr and c == "$":
       raise Exception("Unexpected start of python expr while already parsing a python expression:\n" + line)
@@ -15,6 +17,8 @@ def tokenize(line: str) -> list[str]:
       raise Exception("Unexpected end of python expr while not parsing a python expression:\n" + line)
     elif is_py_expr and c == "}":
       is_py_expr = False
+      if retain_curlies:
+        cur += c
       result.append(cur)
       cur = ""
     elif is_py_expr:

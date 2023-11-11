@@ -1,16 +1,10 @@
 import atk16
 
-if True:
-    2
-else:
-    3
+def func(arg1: int, arg2: int) -> int:
+    a = arg1
+    return a + a
 
-while 3:
-    4
-    break
-    5
-else:
-    6
+b = func(1, 3)
 
 # TEXT_MODE: atk16.ConstInt          = 1
 # GRAPHICS_MODE_ADDR: atk16.ConstInt = 0x17

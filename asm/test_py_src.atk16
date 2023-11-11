@@ -31,7 +31,7 @@
 
 @address 0x0
   ldi vt_stack_addr RA
-  ldr RA __STACK_POINTER
+  ldr RA SP
   jpi program_segment
 
 @address vector_table
@@ -75,42 +75,48 @@
 
 
 
+; <ast.FunctionDef object at 0x100c7b310>
+@label func
+; stack frame: ['arg1', 'arg2', 'a']
+  addi SP 1 SP
+; <ast.Name object at 0x100c7aef0> (arg1)
+  ldi ${SP - 3} RA
+  ldr RA RA
+  spu RA
+  spo RA
+  ldi ${SP - 1} RB
+  str RA RB
+; <ast.Return object at 0x100c7b0a0>
+; <ast.BinOp object at 0x100c7b370>
+; BinOp lhs <ast.BinOp object at 0x100c7b370>
+; <ast.Name object at 0x100c7b3a0> (a)
+  ldi ${SP - 1} RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x100c7b370>
+; <ast.Name object at 0x100c7b3d0> (a)
+  ldi ${SP - 1} RA
+  ldr RA RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+  subi SP 1 SP
+  rsr
+
 @label main
-; <ast.If object at 0x1013c1e40>
-; <ast.Constant object at 0x1013c20b0>
+; stack frame: ['b']
+  addi SP 1 SP
+; <ast.Call object at 0x100c7b520>
+; <ast.Constant object at 0x100c7b580>
   ldi 1 RA
   spu RA
-  spo RA
-  addi RA 0 RA
-  bri zero If_false_branch_0
-; <ast.Constant object at 0x1013c2110>
-  ldi 2 RA
-  spu RA
-  jpi If_end_branch_1
-@label If_false_branch_0
-; <ast.Constant object at 0x1013c2170>
+; <ast.Constant object at 0x100c7b5b0>
   ldi 3 RA
   spu RA
-@label If_end_branch_1
-; <ast.While object at 0x1013c2230>
-@label While_test_2
-; <ast.Constant object at 0x1013c2260>
-  ldi 3 RB
-  spu RB
+  csi func
   spo RA
-  addi RA 0 RA
-  bri zero While_else_3
-; <ast.Constant object at 0x1013c22c0>
-  ldi 4 RB
-  spu RB
-; <ast.Break object at 0x1013c22f0>
-  jpi While_end_4
-; <ast.Constant object at 0x1013c2350>
-  ldi 5 RB
-  spu RB
-  jpi While_test_2
-@label While_else_3
-; <ast.Constant object at 0x1013c2470>
-  ldi 6 RB
-  spu RB
-@label While_end_4
+  ldi ${SP - 1} RB
+  str RA RB
+  subi SP 1 SP

@@ -61,7 +61,7 @@
 @address 0x0
 ; set up stack pointer to point to beginning of stack segment
   ldi vt_stack_addr RA
-  ldr RA __STACK_POINTER
+  ldr RA SP
   jpi program_segment
 
 @address program_segment
