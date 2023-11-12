@@ -78,24 +78,24 @@ def expand_sinc(imm: str) -> ExpandResult:
 def expand_sdec(imm: str) -> ExpandResult:
   return expand_subi("SP", imm, "SP")
 
-def expand_csr(addr_reg: str):
+def expand_csr(addr_reg: str, stratch_reg: str):
   return [
-    ["lpc", "CSR_SCRATCH"],
-    *expand_addi("CSR_SCRATCH", "4", "CSR_SCRATCH"),
-    *expand_spu("CSR_SCRATCH"),
+    ["lpc", stratch_reg],
+    *expand_addi(stratch_reg, "4", stratch_reg),
+    *expand_spu(stratch_reg),
     ["jpr", addr_reg]
   ]
 
-def expand_csi(addr_imm: str):
+def expand_csi(addr_imm: str, stratch_reg: str):
   return [
-    ["lpc", "CSR_SCRATCH"],
-    *expand_addi("CSR_SCRATCH", "4", "CSR_SCRATCH"),
-    *expand_spu("CSR_SCRATCH"),
+    ["lpc", stratch_reg],
+    *expand_addi(stratch_reg, "4", stratch_reg),
+    *expand_spu(stratch_reg),
     ["jpi", addr_imm]
   ]
 
-def expand_rsr():
-  return expand_spo("CSR_SCRATCH") + [["jpr", "CSR_SCRATCH"]]
+def expand_rsr(stratch_reg: str):
+  return expand_spo(stratch_reg) + [["jpr", stratch_reg]]
 
 
 def stack_stash(*rs: str):

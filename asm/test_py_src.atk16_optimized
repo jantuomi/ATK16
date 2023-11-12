@@ -1,6 +1,5 @@
-@opt stack_pointer RG
-@opt csr_scratch RH
 @use ext_std:*
+@let sp RH
 @let vector_table 0x10
 @let vt_ISR0 0x10
 @let vt_ISR1 0x11
@@ -65,53 +64,37 @@
 @label text_mem_addr_p
   25
 @label int_1
-  104
-@label int_2
-  105
-@label func
-  addi SP 1 SP
-  ldi vt_stack_addr RC
-  ldr RC RC
-  ldi 5 RD
-  add RC RD RC
-  ldr RC RC
-  spu RC
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 7 RB
-  add RA RB RA
-  spo RB
-  str RB RA
+  65
+@label int_5
+  26
+@label nth_letter
   ldi vt_stack_addr RA
   ldr RA RA
   ldi 4 RB
   add RA RB RA
-  ldi vt_stack_addr RC
-  ldr RC RC
-  ldi 7 RD
-  add RC RD RC
-  ldr RC RC
-  spu RC
-  ldi vt_stack_addr RC
-  ldr RC RC
-  ldi 7 RD
-  add RC RD RC
-  ldr RC RD
-  spo RC
-  add RC RD RB
+  ldr RA RA
+  ldi int_1 RB
+  ldr RB RB
+  add RA RB RA
+  spu RA
+  ldi vt_stack_addr RA
+  ldr RA RA
+  ldi 3 RB
+  add RA RB RA
+  spo RB
   mov RA SP
   ldr RA RA
   spu RB
   jpr RA
 @label main
-  addi SP 4 SP
+  addi SP 3 SP
   ldi graphics_mode_addr_p RC
   ldr RC RC
   ldr RC RC
   spu RC
   ldi vt_stack_addr RA
   ldr RA RA
-  ldi 1 RB
+  ldi 0 RB
   add RA RB RA
   spo RB
   str RB RA
@@ -121,13 +104,13 @@
   spu RC
   ldi vt_stack_addr RA
   ldr RA RA
-  ldi 2 RB
+  ldi 1 RB
   add RA RB RA
   spo RB
   str RB RA
   ldi vt_stack_addr RA
   ldr RA RA
-  ldi 1 RB
+  ldi 0 RB
   add RA RB RA
   ldr RA RA
   ldi text_mode RB
@@ -135,48 +118,66 @@
   str RB RA
   ldi 0 RC
   spu RC
-  ldi 1 RC
-  spu RC
-  ldi 3 RC
-  spu RC
-  subi SP 3 RC
-  lpc RD
-  addi RD 3 RD
-  str RD RC
-  jpi func
   ldi vt_stack_addr RA
   ldr RA RA
-  ldi 3 RB
+  ldi 2 RB
   add RA RB RA
   spo RB
   str RB RA
-  ldi 0 RC
-  spu RC
-  ldi vt_stack_addr RA
-  ldr RA RA
+  ldi 0b111111111 RG
+@label while_test_2
+  ldi vt_stack_addr RB
+  ldr RB RB
+  ldi 2 RC
+  add RB RC RB
+  ldr RB RB
+  ldi int_5 RC
+  ldr RC RC
+  sub RB RC RB
+  bri carry Compare_true_6
   ldi 0 RB
+  spu RB
+  jpi Compare_end_7
+@label compare_true_6
+  ldi 1 RB
+  spu RB
+@label compare_end_7
+  spo RA
+  addi RA 0 RA
+  bri zero While_else_3
+  ldi vt_stack_addr RA
+  ldr RA RA
+  ldi 1 RB
   add RA RB RA
-  spo RB
-  str RB RA
+  ldr RA RA
+  spu RA
+  ldi vt_stack_addr RA
+  ldr RA RA
+  ldi 2 RB
+  add RA RB RA
+  ldr RA RB
+  spo RA
+  add RA RB RA
+  spu RA
+  ldi 0 RA
+  spu RA
   ldi vt_stack_addr RA
   ldr RA RA
   ldi 2 RB
   add RA RB RA
   ldr RA RA
   spu RA
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 0 RB
-  add RA RB RA
-  ldr RA RB
+  subi SP 2 RA
+  lpc RB
+  addi RB 3 RB
+  str RB RA
+  jpi nth_letter
+  spo RB
   spo RA
-  add RA RB RA
-  ldi int_1 RB
-  ldr RB RB
   str RB RA
   ldi vt_stack_addr RC
   ldr RC RC
-  ldi 0 RD
+  ldi 2 RD
   add RC RD RC
   ldr RC RC
   ldi 1 RD
@@ -184,31 +185,18 @@
   spu RC
   ldi vt_stack_addr RA
   ldr RA RA
-  ldi 0 RB
+  ldi 2 RB
   add RA RB RA
   spo RB
   str RB RA
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 2 RB
-  add RA RB RA
-  ldr RA RA
-  spu RA
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 0 RB
-  add RA RB RA
-  ldr RA RB
-  spo RA
-  add RA RB RA
-  ldi int_2 RB
-  ldr RB RB
-  str RB RA
-@label while_test_3
+  jpi While_test_2
+@label while_else_3
+@label while_end_4
+@label while_test_8
   ldi 1 RA
   addi RA 0 RA
-  bri zero While_else_4
-  jpi While_test_3
-@label while_else_4
-@label while_end_5
-  subi SP 4 SP
+  bri zero While_else_9
+  jpi While_test_8
+@label while_else_9
+@label while_end_10
+  subi SP 3 SP

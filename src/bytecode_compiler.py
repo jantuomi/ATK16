@@ -94,10 +94,8 @@ def emit_serialize_const(const: Any):
       print(f"warn: cannot serialize {type(const)} ({const}), emitting zero")
       emit("  0")
 
-STACK_POINTER_REG = Reg('G')
-CSR_SCRATCH_REG = Reg('H')
-emit(f"@opt stack_pointer {STACK_POINTER_REG}")
-emit(f"@opt csr_scratch {CSR_SCRATCH_REG}")
+STACK_POINTER_REG = Reg('H')
+emit(f"@let SP {STACK_POINTER_REG}")
 emit("@use ext_std:*")
 emit("@include bootstrap")
 

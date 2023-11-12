@@ -1,10 +1,8 @@
 ;; BEGIN BOOTSTRAP
 
-@opt stack_pointer RG
-@opt csr_scratch RH
-
 @use ext_std:*
 
+@let sp              RH
 @let vector_table    0x10
 @let vt_ISR0         0x10 ; ISR0
 @let vt_ISR1         0x11 ; ISR1

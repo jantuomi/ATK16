@@ -14,7 +14,6 @@ class Result3Line:
 @dataclass
 class Result3:
   lines: list[Result3Line]
-  options: Options
   operations: OpExpansionDict
   symbols: dict[str, int]
 
@@ -57,7 +56,6 @@ def pass_3(result2: Result2) -> Result3:
       raise Exception(f"Overlapping segments: address 0x{result_line.address:>04x} has conflicting definitions:\n{formatted}")
   return Result3(
     operations=result2.operations,
-    options=result2.options,
     lines=result_lines,
     symbols=symbols,
   )

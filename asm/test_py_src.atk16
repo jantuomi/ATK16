@@ -1,10 +1,8 @@
 ;; BEGIN BOOTSTRAP
 
-@opt stack_pointer RG
-@opt csr_scratch RH
-
 @use ext_std:*
 
+@let sp              RH
 @let vector_table    0x10
 @let vt_ISR0         0x10 ; ISR0
 @let vt_ISR1         0x11 ; ISR1
@@ -80,56 +78,41 @@
 @label text_mem_addr_p
   25
 @label int_1
-  104
-@label int_2
-  105
+  65
+@label int_5
+  26
 
-; <ast.FunctionDef object at 0x1032fef50>
-@label func
-; stack frame names: ['return_address_0', 'arg1', 'arg2', 'a']
-  addi SP 1 SP
-; <ast.Assign object at 0x1032fee30>
-; assigning a to stack segment + offset 7
-; <ast.Name object at 0x1032fedd0> (arg1)
-  ldi vt_stack_addr RC
-  ldr RC RC
-  ldi 5 RD
-  add RC RD RC
-  ldr RC RC
-  spu RC
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 7 RB
-  add RA RB RA
-  spo RB
-  str RB RA
-; <ast.Return object at 0x1032feda0>
+; <ast.FunctionDef object at 0x1048ce500>
+@label nth_letter
+; stack frame with offsets
+; return_address_0 3
+; n 4
+; <ast.Return object at 0x1048ce440>
+; <ast.Add object at 0x1045f6ad0>
+; BinOp lhs <ast.BinOp object at 0x1048ce410>
+; <ast.Name object at 0x1048ce3e0> (n)
   ldi vt_stack_addr RA
   ldr RA RA
   ldi 4 RB
   add RA RB RA
-; <ast.Add object at 0x10301ab60>
-; BinOp lhs <ast.BinOp object at 0x1032fed70>
-; <ast.Name object at 0x1032fed40> (a)
-  ldi vt_stack_addr RC
-  ldr RC RC
-  ldi 7 RD
-  add RC RD RC
-  ldr RC RC
-  spu RC
-; BinOp rhs <ast.BinOp object at 0x1032fed70>
-; <ast.Name object at 0x1032fed10> (a)
-  ldi vt_stack_addr RC
-  ldr RC RC
-  ldi 7 RD
-  add RC RD RC
-  ldr RC RC
-  spu RC
-  spo RD
-  spo RC
-  add RC RD RC
-  spu RC
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x1048ce410>
+; <ast.Constant object at 0x1048ce3b0>
+  ldi int_1 RA
+  ldr RA RA
+  spu RA
   spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+  ldi vt_stack_addr RA
+  ldr RA RA
+  ldi 3 RB
+  add RA RB RA
+; stack address of return address is stored in reg RA
+  spo RB
+; return value is stored in reg RB
   mov RA SP
   ldr RA RA
   spu RB
@@ -137,192 +120,191 @@
   jpr RA
 
 @label main
-; stack frame names: ['i', 'graphics_mode_addr', 'text_mem_addr', 'b']
-  addi SP 4 SP
-; <ast.Assign object at 0x103067b80>
-; assigning graphics_mode_addr to stack segment + offset 1
-; <ast.Call object at 0x1030677f0>
-; Builtin call load [<ast.Name object at 0x103067fa0>]
-; <ast.Name object at 0x103067fa0> (GRAPHICS_MODE_ADDR_P)
+; stack frame with offsets
+; graphics_mode_addr 0
+; text_mem_addr 1
+; i 2
+  addi SP 3 SP
+; <ast.Assign object at 0x1048ce860>
+; assigning graphics_mode_addr at stack segment + 0
+; evaluating value to be assigned
+; <ast.Call object at 0x1048ce800>
+; Builtin call load [<ast.Name object at 0x1048ce770>]
+; <ast.Name object at 0x1048ce770> (GRAPHICS_MODE_ADDR_P)
   ldi graphics_mode_addr_p RC
   ldr RC RC
   spu RC
   spo RC
   ldr RC RC
   spu RC
+; assigning value to stack segment + 0
   ldi vt_stack_addr RA
   ldr RA RA
-  ldi 1 RB
+  ldi 0 RB
   add RA RB RA
   spo RB
   str RB RA
-; <ast.Assign object at 0x103067790>
-; assigning text_mem_addr to stack segment + offset 2
-; <ast.Call object at 0x103067220>
-; Builtin call load [<ast.Name object at 0x103067f40>]
-; <ast.Name object at 0x103067f40> (TEXT_MEM_ADDR_P)
+; <ast.Assign object at 0x1048ce740>
+; assigning text_mem_addr at stack segment + 1
+; evaluating value to be assigned
+; <ast.Call object at 0x1048ce6e0>
+; Builtin call load [<ast.Name object at 0x1048ce650>]
+; <ast.Name object at 0x1048ce650> (TEXT_MEM_ADDR_P)
   ldi text_mem_addr_p RC
   ldr RC RC
   spu RC
   spo RC
   ldr RC RC
   spu RC
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 2 RB
-  add RA RB RA
-  spo RB
-  str RB RA
-; <ast.Call object at 0x1030673d0>
-; Builtin call store [<ast.Name object at 0x1032fefb0>, <ast.Name object at 0x1032fef80>]
-; <ast.Name object at 0x1032fefb0> (graphics_mode_addr)
+; assigning value to stack segment + 1
   ldi vt_stack_addr RA
   ldr RA RA
   ldi 1 RB
   add RA RB RA
+  spo RB
+  str RB RA
+; <ast.Call object at 0x1048ce5f0>
+; Builtin call store [<ast.Name object at 0x1048ce560>, <ast.Name object at 0x1048ce530>]
+; <ast.Name object at 0x1048ce560> (graphics_mode_addr)
+  ldi vt_stack_addr RA
+  ldr RA RA
+  ldi 0 RB
+  add RA RB RA
   ldr RA RA
   spu RA
-; <ast.Name object at 0x1032fef80> (TEXT_MODE)
+; <ast.Name object at 0x1048ce530> (TEXT_MODE)
   ldi text_mode RA
   ldr RA RA
   spu RA
   spo RB
   spo RA
   str RB RA
-; <ast.Assign object at 0x1032fecb0>
-; assigning b to stack segment + offset 3
-; <ast.Call object at 0x1032fec50>
-; Call function func
+; <ast.Assign object at 0x1048ce350>
+; assigning i at stack segment + 2
+; evaluating value to be assigned
+; <ast.Constant object at 0x1048ce2f0>
   ldi 0 RC
   spu RC
-; <ast.Constant object at 0x1032febf0>
-  ldi 1 RC
-  spu RC
-; <ast.Constant object at 0x1032febc0>
-  ldi 3 RC
-  spu RC
-; set up return address and jump to subroutine
-  subi SP 3 RC
-  lpc RD
-  addi RD 3 RD
-  str RD RC
-  jpi func
+; assigning value to stack segment + 2
   ldi vt_stack_addr RA
   ldr RA RA
-  ldi 3 RB
+  ldi 2 RB
   add RA RB RA
   spo RB
   str RB RA
-; <ast.Assign object at 0x1032feb90>
-; assigning i to stack segment + offset 0
-; <ast.Constant object at 0x1032feb30>
-  ldi 0 RC
-  spu RC
-  ldi vt_stack_addr RA
-  ldr RA RA
+; <ast.Call object at 0x1048ce290>
+; Builtin call asm [<ast.Constant object at 0x1048ce200>]
+  ldi 0b111111111 RG
+; <ast.While object at 0x1048ce1d0>
+@label while_test_2
+; <ast.Name object at 0x1048ce170> (i)
+  ldi vt_stack_addr RB
+  ldr RB RB
+  ldi 2 RC
+  add RB RC RB
+  ldr RB RB
+  spu RB
+; <ast.Constant object at 0x1048ce140>
+  ldi int_5 RB
+  ldr RB RB
+  spu RB
+  spo RC
+  spo RB
+  sub RB RC RB
+  bri carry Compare_true_6
   ldi 0 RB
+  spu RB
+  jpi Compare_end_7
+@label compare_true_6
+  ldi 1 RB
+  spu RB
+@label compare_end_7
+  spo RA
+  addi RA 0 RA
+  bri zero While_else_3
+; <ast.Call object at 0x1048ce0e0>
+; Builtin call store [<ast.BinOp object at 0x1048ce050>, <ast.Call object at 0x1048cdd80>]
+; <ast.Add object at 0x1045f6ad0>
+; BinOp lhs <ast.BinOp object at 0x1048ce050>
+; <ast.Name object at 0x1048ce020> (text_mem_addr)
+  ldi vt_stack_addr RA
+  ldr RA RA
+  ldi 1 RB
   add RA RB RA
-  spo RB
-  str RB RA
-; <ast.Call object at 0x1032fead0>
-; Builtin call store [<ast.BinOp object at 0x1032fea40>, <ast.Call object at 0x1032fe9b0>]
-; <ast.Add object at 0x10301ab60>
-; BinOp lhs <ast.BinOp object at 0x1032fea40>
-; <ast.Name object at 0x1032fea10> (text_mem_addr)
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x1048ce050>
+; <ast.Name object at 0x1048cdff0> (i)
   ldi vt_stack_addr RA
   ldr RA RA
   ldi 2 RB
   add RA RB RA
   ldr RA RA
   spu RA
-; BinOp rhs <ast.BinOp object at 0x1032fea40>
-; <ast.Name object at 0x1032fe9e0> (i)
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 0 RB
-  add RA RB RA
-  ldr RA RA
-  spu RA
   spo RB
   spo RA
   add RA RB RA
   spu RA
-; <ast.Call object at 0x1032fe9b0>
-; Builtin call ord [<ast.Constant object at 0x1032fe920>]
-; <ast.Constant object at 0x1032fe920>
-  ldi int_1 RA
+; <ast.Call object at 0x1048cdd80>
+; Call function nth_letter
+  ldi 0 RA
+  spu RA
+; <ast.Name object at 0x1048cdd20> (i)
+  ldi vt_stack_addr RA
+  ldr RA RA
+  ldi 2 RB
+  add RA RB RA
   ldr RA RA
   spu RA
+; set up return address and jump to subroutine
+  subi SP 2 RA
+  lpc RB
+  addi RB 3 RB
+  str RB RA
+  jpi nth_letter
   spo RB
   spo RA
   str RB RA
-; <ast.Assign object at 0x1032fe8f0>
-; assigning i to stack segment + offset 0
-; <ast.Add object at 0x10301ab60>
-; BinOp lhs <ast.BinOp object at 0x1032fe890>
-; <ast.Name object at 0x1032fe860> (i)
+; <ast.Assign object at 0x1048ccc70>
+; assigning i at stack segment + 2
+; evaluating value to be assigned
+; <ast.Add object at 0x1045f6ad0>
+; BinOp lhs <ast.BinOp object at 0x1048cda50>
+; <ast.Name object at 0x1048cd750> (i)
   ldi vt_stack_addr RC
   ldr RC RC
-  ldi 0 RD
+  ldi 2 RD
   add RC RD RC
   ldr RC RC
   spu RC
-; BinOp rhs <ast.BinOp object at 0x1032fe890>
-; <ast.Constant object at 0x1032fe830>
+; BinOp rhs <ast.BinOp object at 0x1048cda50>
+; <ast.Constant object at 0x1048cd720>
   ldi 1 RC
   spu RC
   spo RD
   spo RC
   add RC RD RC
   spu RC
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 0 RB
-  add RA RB RA
-  spo RB
-  str RB RA
-; <ast.Call object at 0x1032fe7d0>
-; Builtin call store [<ast.BinOp object at 0x1032fe740>, <ast.Call object at 0x1032fe6b0>]
-; <ast.Add object at 0x10301ab60>
-; BinOp lhs <ast.BinOp object at 0x1032fe740>
-; <ast.Name object at 0x1032fe710> (text_mem_addr)
+; assigning value to stack segment + 2
   ldi vt_stack_addr RA
   ldr RA RA
   ldi 2 RB
   add RA RB RA
-  ldr RA RA
-  spu RA
-; BinOp rhs <ast.BinOp object at 0x1032fe740>
-; <ast.Name object at 0x1032fe6e0> (i)
-  ldi vt_stack_addr RA
-  ldr RA RA
-  ldi 0 RB
-  add RA RB RA
-  ldr RA RA
-  spu RA
   spo RB
-  spo RA
-  add RA RB RA
-  spu RA
-; <ast.Call object at 0x1032fe6b0>
-; Builtin call ord [<ast.Constant object at 0x1032fe620>]
-; <ast.Constant object at 0x1032fe620>
-  ldi int_2 RA
-  ldr RA RA
-  spu RA
-  spo RB
-  spo RA
   str RB RA
-; <ast.While object at 0x1032fe5f0>
-@label while_test_3
-; <ast.Constant object at 0x1032fe5c0>
+  jpi While_test_2
+@label while_else_3
+@label while_end_4
+; <ast.While object at 0x1048cd0f0>
+@label while_test_8
+; <ast.Constant object at 0x1048cd060>
   ldi 1 RB
   spu RB
   spo RA
   addi RA 0 RA
-  bri zero While_else_4
-; <ast.Pass object at 0x1032fe590>
-  jpi While_test_3
-@label while_else_4
-@label while_end_5
-  subi SP 4 SP
+  bri zero While_else_9
+; <ast.Pass object at 0x1048ccfa0>
+  jpi While_test_8
+@label while_else_9
+@label while_end_10
+  subi SP 3 SP

@@ -28,9 +28,8 @@ class Reg():
     return f"R{self.reg}"
 
 ALL_REGS: list[RegChar] = ["A", "B", "C", "D", "E", "F", "G", "H"]
-STACK_POINTER_REG = "G"
-CSR_SCRATCH_REG = "H"
-SPECIAL_REGS: list[RegChar] = [STACK_POINTER_REG, CSR_SCRATCH_REG]
+STACK_POINTER_REG = "H"
+SPECIAL_REGS: list[RegChar] = [STACK_POINTER_REG]
 GENERIC_REGS: OrderedDict[RegChar, None] = OrderedDict()
 for char in ALL_REGS:
   if char not in SPECIAL_REGS:
@@ -84,6 +83,7 @@ class Compiler(ast.NodeVisitor):
     self.currently_emitting_asm_list = self.program_asm
 
     self.frame_stack = FrameStack()
+    self.tmp_stack_values_n: int = 0
 
     self.unique_name_counter = 0
     self.latest_break_target: Label | None = None
@@ -112,6 +112,14 @@ class Compiler(ast.NodeVisitor):
     asm = format_asm_row(asm)
 
     self.currently_emitting_asm_list.append(asm)
+
+  def emit_stack_push(self, reg: str):
+    self.tmp_stack_values_n += 1
+    self.emit(f"spu {reg}")
+
+  def emit_stack_pop(self, reg: str):
+    self.tmp_stack_values_n -= 1
+    self.emit(f"spo {reg}")
 
   def emit_label(self, label_name: str):
     label_name = label_name.lower()
@@ -219,16 +227,14 @@ class Compiler(ast.NodeVisitor):
     stmts = node.body
     frame_names = self.collect_local_variables(stmts)
 
-    self.emit(f"; stack frame names: {frame_names}")
-    # Move stack pointer to accommodate local variables
-
-    # TODO instead of self.stack_frame_size, use a proper stack for frames.
-    # That way, we can restore the top-level stack frame when returning
+    self.emit("; stack frame with offsets")
 
     frame_bindings: dict[str, Label | StackOffset] = {}
     for idx, name in enumerate(frame_names):
       offset = self.frame_stack.total_offset() + idx
       frame_bindings[name] = offset
+
+      self.emit(f"; {name} {offset}")
 
     frame = Frame(
       names = frame_names,
@@ -238,15 +244,19 @@ class Compiler(ast.NodeVisitor):
     self.emit(f"addi SP {len(frame.names)} SP")
 
     for stmt in stmts:
+      if type(stmt) == ast.Expr and type(stmt.value) != ast.Call:
+        self.emit("; NOP top-level expression")
+        continue
+
       self.visit(stmt)
 
     self.frame_stack.pop()
     self.emit(f"subi SP {len(frame.names)} SP")
 
   def visit_Expr(self, expr: ast.Expr):
-    if self.frame_stack.size == 1 and type(expr.value) != ast.Call:
-      self.emit("; NOP top-level expression")
-      return
+    # if self.frame_stack.size == 1 and type(expr.value) != ast.Call:
+    #   self.emit("; NOP top-level expression")
+    #   return
 
     self.visit(expr.value)
 
@@ -381,15 +391,61 @@ class Compiler(ast.NodeVisitor):
       self.emit(f"bri zero {label_false}")
 
     for true_branch_stmt in node.body:
+      if type(true_branch_stmt) == ast.Expr and type(true_branch_stmt.value) != ast.Call:
+        self.emit("; NOP top-level expression")
+        continue
+
       self.visit(true_branch_stmt)
 
     self.emit(f"jpi {label_end}")
     self.emit_label(label_false)
 
     for false_branch_stmt in node.orelse:
+      if type(false_branch_stmt) == ast.Expr and type(false_branch_stmt.value) != ast.Call:
+        self.emit("; NOP top-level expression")
+        continue
+
       self.visit(false_branch_stmt)
 
     self.emit_label(label_end)
+
+  def visit_Compare(self, node: ast.Compare):
+    if len(node.ops) > 1:
+      raise Exception("Multiple compare ops not supported")
+
+    if len(node.comparators) > 1:
+      raise Exception("Multiple comparators not supported")
+
+    op = node.ops[0]
+    left = node.left
+    right = node.comparators[0]
+
+    self.visit(left)
+    self.visit(right)
+
+    label_true = self.get_unique_name("Compare_true")
+    label_end = self.get_unique_name("Compare_end")
+
+    with self.allocated_reg() as reg_lhs, self.allocated_reg() as reg_rhs:
+      match op:
+        case ast.Lt(): # lhs < rhs
+          self.emit(f"spo {reg_rhs}")
+          self.emit(f"spo {reg_lhs}")
+
+          self.emit(f"sub {reg_lhs} {reg_rhs} {reg_lhs}")
+          self.emit(f"bri carry {label_true}")
+
+          # false branch
+          self.emit(f"ldi 0 {reg_lhs}")
+          self.emit(f"spu {reg_lhs}")
+          self.emit(f"jpi {label_end}")
+
+          # true branch
+          self.emit_label(label_true)
+          self.emit(f"ldi 1 {reg_lhs}")
+          self.emit(f"spu {reg_lhs}")
+
+          self.emit_label(label_end)
 
   def visit_While(self, node: ast.While):
     self.emit(f"; {node}")
@@ -409,6 +465,10 @@ class Compiler(ast.NodeVisitor):
       self.emit(f"bri zero {label_else}")
 
     for body_stmt in node.body:
+      if type(body_stmt) == ast.Expr and type(body_stmt.value) != ast.Call:
+        self.emit("; NOP top-level expression")
+        continue
+
       self.visit(body_stmt)
 
     self.emit(f"jpi {label_test}")
@@ -441,6 +501,7 @@ class Compiler(ast.NodeVisitor):
     raise Exception("Lambda functions not supported. Consider using a named function instead.")
 
   def collect_local_variables(self, stmts: list[ast.stmt]):
+    result: list[str] = []
     symbols: list[str] = []
     for stmt in stmts:
       match stmt:
@@ -455,8 +516,11 @@ class Compiler(ast.NodeVisitor):
           symbols += self.collect_local_variables(fb)
         case other: pass
 
-    # remove duplicates
-    return list(set(symbols))
+    for symbol in symbols:
+      if symbol not in result:
+        result.append(symbol)
+
+    return result
 
   def visit_FunctionDef(self, node: ast.FunctionDef):
     prev_currently_emitting_asm_list = self.currently_emitting_asm_list
@@ -478,15 +542,18 @@ class Compiler(ast.NodeVisitor):
     return_address_name = self.get_unique_name("return_address")
     local_var_names = self.collect_local_variables(fn_stmts)
     frame_names = [return_address_name] + fn_params + local_var_names
-    self.emit(f"; stack frame names: {frame_names}")
 
     # Move stack pointer to accommodate local variables
-    self.emit(f"addi SP {len(local_var_names)} SP")
+    if len(local_var_names) > 0:
+      self.emit(f"addi SP {len(local_var_names)} SP")
 
+    self.emit("; stack frame with offsets")
     frame_bindings: dict[str, Label | StackOffset] = {}
     for idx, name in enumerate(frame_names):
       offset = self.frame_stack.total_offset() + idx
       frame_bindings[name] = offset
+
+      self.emit(f"; {name} {offset}")
 
     frame = Frame(
       names = frame_names,
@@ -509,20 +576,23 @@ class Compiler(ast.NodeVisitor):
     frame = self.frame_stack.peek()
 
     ret = node.value
+    if ret is not None:
+        self.visit(ret)
 
     with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
-      print(frame.names)
       ret_addr_offset = self.frame_stack.total_offset() - frame.size()
       self.emit(f"ldi vt_stack_addr {reg1}") # vector table address of stack segment address
       self.emit(f"ldr {reg1} {reg1}") # stack segment address
       self.emit(f"ldi {ret_addr_offset} {reg2}") # stack offset
       self.emit(f"add {reg1} {reg2} {reg1}") # stack address of return address = stack segment start + stack offset
+      self.emit(f"; stack address of return address is stored in reg {reg1}")
 
       if ret is not None:
-        self.visit(ret)
         self.emit(f"spo {reg2}")
       else:
         self.emit(f"ldi 0 {reg2}")
+
+      self.emit(f"; return value is stored in reg {reg2}")
 
       self.emit(f"mov {reg1} SP") # reset stack pointer to return address position (i.e. start of stack frame)
       self.emit(f"ldr {reg1} {reg1}") # return address
@@ -609,10 +679,12 @@ class Compiler(ast.NodeVisitor):
         if type(offset) != StackOffset:
           raise Exception(f"Invalid address {offset} for name {name}. Can only assign to stack offsets.")
 
-        self.emit(f"; assigning {name} to stack segment + offset {offset}")
+        self.emit(f"; assigning {name} at stack segment + {offset}")
 
         with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
+          self.emit(f"; evaluating value to be assigned")
           self.visit(value)
+          self.emit(f"; assigning value to stack segment + {offset}")
           self.emit(f"ldi vt_stack_addr {reg1}")
           self.emit(f"ldr {reg1} {reg1}")
           self.emit(f"ldi {offset} {reg2}")

@@ -3,11 +3,6 @@ from asm_eval import *
 from dataclasses import dataclass
 
 @dataclass
-class Options:
-  stack_pointer = "rg"
-  csr_scratch = "rh"
-
-@dataclass
 class Meta:
   address: int
 

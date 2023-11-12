@@ -13,11 +13,9 @@ class Result2Line:
 @dataclass
 class Result2:
   lines: list[Result2Line]
-  options: Options
   operations: OpExpansionDict
 
 def pass_2(result1: Result1) -> Result2:
-  options = Options()
   result_lines: list[Result2Line] = []
 
   for line in result1.lines:
@@ -38,6 +36,5 @@ def pass_2(result1: Result1) -> Result2:
 
   return Result2(
     operations=result1.operations,
-    options=options,
     lines=result_lines
   )

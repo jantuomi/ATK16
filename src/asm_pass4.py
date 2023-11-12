@@ -15,15 +15,8 @@ class Result4Line:
 @dataclass
 class Result4:
   lines: list[Result4Line]
-  options: Options
   operations: OpExpansionDict
   symbols: dict[str, int]
-
-def translate_opt(arg: str, options: Options) -> str:
-  match arg:
-    case "SP": return options.stack_pointer
-    case "CSR_SCRATCH": return options.csr_scratch
-    case _: return arg
 
 def pass_4(result3: Result3) -> Result4:
   result_lines: list[Result4Line] = []
@@ -34,7 +27,6 @@ def pass_4(result3: Result3) -> Result4:
       address=line.address,
     )
 
-    args = list(map(lambda a: translate_opt(a, result3.options), args))
     text = " ".join([keyword, *args])
     original_text = " ".join(line.original_parts)
 
@@ -65,6 +57,5 @@ def pass_4(result3: Result3) -> Result4:
   return Result4(
     operations=result3.operations,
     symbols=result3.symbols,
-    options=result3.options,
     lines=result_lines,
   )

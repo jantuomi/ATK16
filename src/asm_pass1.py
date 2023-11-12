@@ -16,23 +16,15 @@ class Result1Line:
 @dataclass
 class Result1:
   lines: list[Result1Line]
-  options: Options
   operations: OpExpansionDict
 
 def pass_1(result0: Result0) -> Result1:
-  options = Options()
   result_lines: list[Result1Line] = []
   operations: OpExpansionDict = default_expansions.copy()
 
   for line in result0.lines:
     keyword, *args = tokenize(line.line)
     match keyword:
-      case "@opt":
-        opt_name, opt_value = args
-        match opt_name:
-          case "stack_pointer": options.stack_pointer = opt_value
-          case "csr_scratch": options.csr_scratch = opt_value
-          case _: raise Exception("Unknown @opt: " + opt_name)
       case "@use":
         module_name, ops = args[0].split(":")
         ops_split = ops.split(",")
@@ -52,6 +44,5 @@ def pass_1(result0: Result0) -> Result1:
 
   return Result1(
     operations=operations,
-    options=options,
     lines=result_lines
   )
