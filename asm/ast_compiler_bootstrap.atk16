@@ -2,7 +2,9 @@
 
 @use ext_std:*
 
-@let sp              RH
+@let sp              RH   ; stack pointer (points to empty slot at top of stack)
+@let fp              RG   ; frame pointer (points to base of currently active frame)
+
 @let vector_table    0x10
 @let vt_ISR0         0x10 ; ISR0
 @let vt_ISR1         0x11 ; ISR1
@@ -30,6 +32,7 @@
 @address 0x0
   ldi vt_stack_addr RA
   ldr RA SP
+  mov SP FP
   jpi program_segment
 
 @address vector_table

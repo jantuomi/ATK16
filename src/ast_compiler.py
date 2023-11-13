@@ -28,8 +28,11 @@ class Reg():
     return f"R{self.reg}"
 
 ALL_REGS: list[RegChar] = ["A", "B", "C", "D", "E", "F", "G", "H"]
-STACK_POINTER_REG = "H"
-SPECIAL_REGS: list[RegChar] = [STACK_POINTER_REG]
+FRAME_POINTER_REG_CHAR: RegChar = "G" # points to base of stack frame
+FRAME_POINTER_REG = Reg(FRAME_POINTER_REG_CHAR)
+STACK_POINTER_REG_CHAR: RegChar = "H"
+STACK_POINTER_REG = Reg(STACK_POINTER_REG_CHAR)
+SPECIAL_REGS: list[RegChar] = [FRAME_POINTER_REG_CHAR, STACK_POINTER_REG_CHAR]
 GENERIC_REGS: OrderedDict[RegChar, None] = OrderedDict()
 for char in ALL_REGS:
   if char not in SPECIAL_REGS:
@@ -41,38 +44,6 @@ def format_asm_row(asm: str) -> str:
   else:
     return asm
 
-@dataclass
-class Frame:
-  names: list[str]
-  bindings: dict[str, Label | StackOffset]
-
-  def size(self) -> int:
-    return len(self.names)
-
-class FrameStack:
-  def __init__(self, stack: list[Frame] = []):
-    self.stack: list[Frame] = stack
-
-  def push(self, frame: Frame):
-    self.stack.append(frame)
-
-  def pop(self) -> Frame | None:
-    if len(self.stack) == 0: return None
-    return self.stack.pop()
-
-  def peek(self) -> Frame:
-    return self.stack[self.size() - 1]
-
-  def size(self) -> int:
-    return len(self.stack)
-
-  def total_offset(self) -> int:
-    total: int = 0
-    for frame in self.stack:
-      total += frame.size()
-
-    return total
-
 class Compiler(ast.NodeVisitor):
   def __init__(self):
     self.const_asm: list[str] = []
@@ -82,8 +53,8 @@ class Compiler(ast.NodeVisitor):
     self.function_def_asms: list[str] = []
     self.currently_emitting_asm_list = self.program_asm
 
-    self.frame_stack = FrameStack()
-    self.tmp_stack_values_n: int = 0
+    self.local_bindings: dict[str, StackOffset] = {}
+    self.const_bindings: dict[str, Label] = {}
 
     self.unique_name_counter = 0
     self.latest_break_target: Label | None = None
@@ -102,8 +73,7 @@ class Compiler(ast.NodeVisitor):
     self.emit_label(name)
     self.emit(f"{value}")
 
-    frame = self.frame_stack.peek()
-    frame.bindings[name] = name
+    self.const_bindings[name] = name
 
     self.currently_emitting_asm_list = prev_currently_emitting_asm_list
 
@@ -112,14 +82,6 @@ class Compiler(ast.NodeVisitor):
     asm = format_asm_row(asm)
 
     self.currently_emitting_asm_list.append(asm)
-
-  def emit_stack_push(self, reg: str):
-    self.tmp_stack_values_n += 1
-    self.emit(f"spu {reg}")
-
-  def emit_stack_pop(self, reg: str):
-    self.tmp_stack_values_n -= 1
-    self.emit(f"spo {reg}")
 
   def emit_label(self, label_name: str):
     label_name = label_name.lower()
@@ -176,6 +138,11 @@ class Compiler(ast.NodeVisitor):
           case [ast.Constant(str(value))]:
             self.emit(value)
 
+             # return None
+            with self.allocated_reg() as arg:
+              self.emit(f"ldi 0 {arg}")
+              self.emit(f"spu {arg}")
+
           case other: raise Exception(f"asm: invalid args: {other}")
 
       case "store":
@@ -191,12 +158,17 @@ class Compiler(ast.NodeVisitor):
           self.emit(f"spo {arg1}")
           self.emit(f"str {arg2} {arg1}")
 
+          # return None
+          self.emit(f"ldi 0 {arg1}")
+          self.emit(f"spu {arg1}")
+
       case "load":
         if len(args) != 1:
           raise Exception("Invalid number of arguments to load: " + str(len(args)))
 
         self.visit(args[0])
 
+        self.emit("; (load) dereferencing top of stack")
         with self.allocated_reg() as arg:
           self.emit(f"spo {arg}")
           self.emit(f"ldr {arg} {arg}")
@@ -219,7 +191,7 @@ class Compiler(ast.NodeVisitor):
         name = self.get_unique_name("int")
         self.assign_const(name, value)
         self.emit(f"ldi {name} {reg}")
-        self.emit(f"ldr {reg} {reg}")
+        self.emit(f"ldr {reg} {reg} ; {name} = {value}")
 
       self.emit(f"spu {reg}")
 
@@ -228,20 +200,11 @@ class Compiler(ast.NodeVisitor):
     frame_names = self.collect_local_variables(stmts)
 
     self.emit("; stack frame with offsets")
-
-    frame_bindings: dict[str, Label | StackOffset] = {}
-    for idx, name in enumerate(frame_names):
-      offset = self.frame_stack.total_offset() + idx
-      frame_bindings[name] = offset
-
+    for offset, name in enumerate(frame_names):
+      self.local_bindings[name] = offset
       self.emit(f"; {name} {offset}")
 
-    frame = Frame(
-      names = frame_names,
-      bindings = frame_bindings,
-    )
-    self.frame_stack.push(frame)
-    self.emit(f"addi SP {len(frame.names)} SP")
+    self.emit(f"addi SP {len(frame_names)} SP")
 
     for stmt in stmts:
       if type(stmt) == ast.Expr and type(stmt.value) != ast.Call:
@@ -250,15 +213,19 @@ class Compiler(ast.NodeVisitor):
 
       self.visit(stmt)
 
-    self.frame_stack.pop()
-    self.emit(f"subi SP {len(frame.names)} SP")
+    self.emit(f"mov FP SP")
+    self.emit("hlt")
 
   def visit_Expr(self, expr: ast.Expr):
-    # if self.frame_stack.size == 1 and type(expr.value) != ast.Call:
+    # if type(expr.value) != ast.Call:
     #   self.emit("; NOP top-level expression")
     #   return
 
     self.visit(expr.value)
+
+    with self.allocated_reg() as reg:
+      self.emit("; popping free-standing Expr result from stack")
+      self.emit(f"spo {reg}")
 
   def visit_UnaryOp(self, node: ast.UnaryOp):
     self.emit(f"; {node.op}")
@@ -410,6 +377,8 @@ class Compiler(ast.NodeVisitor):
     self.emit_label(label_end)
 
   def visit_Compare(self, node: ast.Compare):
+    self.emit(f"; {node}")
+
     if len(node.ops) > 1:
       raise Exception("Multiple compare ops not supported")
 
@@ -420,12 +389,13 @@ class Compiler(ast.NodeVisitor):
     left = node.left
     right = node.comparators[0]
 
-    self.visit(left)
-    self.visit(right)
-
     label_true = self.get_unique_name("Compare_true")
     label_end = self.get_unique_name("Compare_end")
 
+    self.visit(left)
+    self.visit(right)
+
+    self.emit(f"; Comparing {left} {op} {right}")
     with self.allocated_reg() as reg_lhs, self.allocated_reg() as reg_rhs:
       match op:
         case ast.Lt(): # lhs < rhs
@@ -539,67 +509,42 @@ class Compiler(ast.NodeVisitor):
       raise Exception("Only simple positional args are supported for now in function definitions.")
 
     self.emit_label(fn_name)
-    return_address_name = self.get_unique_name("return_address")
     local_var_names = self.collect_local_variables(fn_stmts)
-    frame_names = [return_address_name] + fn_params + local_var_names
+    frame_names = fn_params + local_var_names
 
     # Move stack pointer to accommodate local variables
     if len(local_var_names) > 0:
       self.emit(f"addi SP {len(local_var_names)} SP")
 
+    prev_local_bindings = self.local_bindings
+    self.local_bindings = {}
     self.emit("; stack frame with offsets")
-    frame_bindings: dict[str, Label | StackOffset] = {}
-    for idx, name in enumerate(frame_names):
-      offset = self.frame_stack.total_offset() + idx
-      frame_bindings[name] = offset
-
+    for offset, name in enumerate(frame_names):
+      self.local_bindings[name] = offset
       self.emit(f"; {name} {offset}")
-
-    frame = Frame(
-      names = frame_names,
-      bindings = frame_bindings
-    )
-    self.frame_stack.push(frame)
 
     for stmt in fn_stmts:
       self.visit(stmt)
 
-    self.frame_stack.pop()
+    self.local_bindings = prev_local_bindings
     self.currently_emitting_asm_list = prev_currently_emitting_asm_list
 
   def visit_Return(self, node: ast.Return):
     self.emit(f"; {node}")
 
-    if self.frame_stack.size() <= 1:
-      raise Exception("Encountered return in the top level stack frame")
-
-    frame = self.frame_stack.peek()
-
-    ret = node.value
-    if ret is not None:
-        self.visit(ret)
-
     with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
-      ret_addr_offset = self.frame_stack.total_offset() - frame.size()
-      self.emit(f"ldi vt_stack_addr {reg1}") # vector table address of stack segment address
-      self.emit(f"ldr {reg1} {reg1}") # stack segment address
-      self.emit(f"ldi {ret_addr_offset} {reg2}") # stack offset
-      self.emit(f"add {reg1} {reg2} {reg1}") # stack address of return address = stack segment start + stack offset
-      self.emit(f"; stack address of return address is stored in reg {reg1}")
-
-      if ret is not None:
-        self.emit(f"spo {reg2}")
+      if node.value is not None:
+        self.visit(node.value)
       else:
-        self.emit(f"ldi 0 {reg2}")
+        self.emit(f"ldi 0 {reg1}")
+        self.emit(f"spu {reg1}")
 
-      self.emit(f"; return value is stored in reg {reg2}")
+      self.emit(f"; return value is on top of stack")
 
-      self.emit(f"mov {reg1} SP") # reset stack pointer to return address position (i.e. start of stack frame)
-      self.emit(f"ldr {reg1} {reg1}") # return address
-
-      self.emit(f"spu {reg2}")
       self.emit(f"; return from function")
-      self.emit(f"jpr {reg1}")
+      self.emit(f"subi FP 1 FP")
+      self.emit(f"ldr FP {reg2}")
+      self.emit(f"jpr {reg2}")
 
   def visit_Call(self, node: ast.Call):
     self.emit(f"; {node}")
@@ -610,7 +555,12 @@ class Compiler(ast.NodeVisitor):
       case ast.Name(name):
         self.emit(f"; Call function {name}")
 
+        # Push the current FP
+        self.emit("spu FP")
+        #self.emit("mov SP FP") # BUG: FP needs to be moved AFTER EVALING ARGS! args depend on FP in calling frame if there are names to resolve!
+
         # Reserve a stack slot for the return address
+        # FP will point to this slot
         with self.allocated_reg() as reg:
           self.emit(f"ldi 0 {reg}")
           self.emit(f"spu {reg}")
@@ -619,30 +569,31 @@ class Compiler(ast.NodeVisitor):
         for arg in node.args:
           self.visit(arg)
 
-        with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
+        self.emit(f"subi SP {1 + len(node.args)} FP")
+
+        with self.allocated_reg() as reg:
           self.emit("; set up return address and jump to subroutine")
-          self.emit(f"subi SP {len(node.args) + 1} {reg1}")
-          self.emit(f"lpc {reg2}")
-          self.emit(f"addi {reg2} 3 {reg2}")
-          self.emit(f"str {reg2} {reg1}")
+          self.emit(f"lpc {reg}")
+          self.emit(f"addi {reg} 4 {reg}") # imm must equal number of primitive instrs from lpc until jpi
+          self.emit(f"str {reg} FP")
+          self.emit(f"addi FP 1 FP")
           self.emit(f"jpi {name}")
+          # ...after return from call...
+          self.emit(f"spo {reg}")
+
+          self.emit("mov FP SP") # move stack pointer to base of stack frame, i.e. top of previous frame
+          self.emit("spo FP") # restore FP of previous frame
+          self.emit(f"spu {reg}")
 
       case other:
         raise NotImplementedError(f"Unhandled Call: {other}")
 
   def resolve_name(self, name: str) -> Label | StackOffset:
-    frames = FrameStack(self.frame_stack.stack.copy())
+    if name in self.local_bindings:
+      return self.local_bindings[name]
 
-    while frames.size() > 0:
-      frame = cast(Frame, frames.pop())
-
-      if name in frame.bindings:
-        addr = frame.bindings[name]
-        match addr:
-          case Label(value):
-            return value
-          case StackOffset(value):
-            return value
+    if name in self.const_bindings:
+      return self.const_bindings[name]
 
     raise Exception(f"{name} is unbound")
 
@@ -652,20 +603,18 @@ class Compiler(ast.NodeVisitor):
     name = node.id.lower()
     addr = self.resolve_name(name)
 
-    with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
+    with self.allocated_reg() as reg:
       match addr:
         case Label(label):
-          self.emit(f"ldi {label} {reg1}")
+          self.emit(f"ldi {label} {reg}")
         case StackOffset(offset):
-          self.emit(f"ldi vt_stack_addr {reg1}")
-          self.emit(f"ldr {reg1} {reg1}")
-          self.emit(f"ldi {offset} {reg2}")
-          self.emit(f"add {reg1} {reg2} {reg1}")
+          self.emit(f"ldi {offset} {reg}")
+          self.emit(f"add FP {reg} {reg}")
         case other:
           raise Exception(f"Unsupported addr value: {other}")
 
-      self.emit(f"ldr {reg1} {reg1}")
-      self.emit(f"spu {reg1}")
+      self.emit(f"ldr {reg} {reg}")
+      self.emit(f"spu {reg}")
 
   def visit_Assign(self, node: ast.Assign):
     self.emit(f"; {node}")
@@ -679,18 +628,17 @@ class Compiler(ast.NodeVisitor):
         if type(offset) != StackOffset:
           raise Exception(f"Invalid address {offset} for name {name}. Can only assign to stack offsets.")
 
-        self.emit(f"; assigning {name} at stack segment + {offset}")
+        self.emit(f"; assigning {name} at FP + {offset}")
 
         with self.allocated_reg() as reg1, self.allocated_reg() as reg2:
           self.emit(f"; evaluating value to be assigned")
           self.visit(value)
-          self.emit(f"; assigning value to stack segment + {offset}")
-          self.emit(f"ldi vt_stack_addr {reg1}")
-          self.emit(f"ldr {reg1} {reg1}")
+          self.emit(f"; assigning stack address (FP + {offset}) := top of stack")
+          self.emit(f"spo {reg1}") # value
+
           self.emit(f"ldi {offset} {reg2}")
-          self.emit(f"add {reg1} {reg2} {reg1}") # address
-          self.emit(f"spo {reg2}") # value
-          self.emit(f"str {reg2} {reg1}")
+          self.emit(f"add {reg2} FP {reg2}") # address
+          self.emit(f"str {reg1} {reg2}")
 
       case other:
         raise Exception(f"Unsupported assign targets: {other}")
@@ -728,10 +676,19 @@ class Optimizer:
     asm = [row for row in asm if not len(row) == 0]
     asm = [tokenize(row, retain_curlies=True) for row in asm]
     asm = self.compact_spu_spo_pattern(asm)
-    asm = self.compact_target_mov_pattern(asm)
-    asm = self.compact_target_mov_pattern(asm)
-    asm = self.compact_mov_source_pattern(asm)
-    asm = self.compact_mov_source_pattern(asm)
+
+    # TODO: not safe when setting loading SP and FP
+    #   ldr RA SP
+    #   mov RA FP
+    # gets optimized to
+    #   ldr RA FP
+    #asm = self.compact_target_mov_pattern(asm)
+    #asm = self.compact_target_mov_pattern(asm)
+
+    # TODO: not safe at all. E.g. breaks a while True: pass loop
+    #asm = self.compact_mov_source_pattern(asm)
+    #asm = self.compact_mov_source_pattern(asm)
+
     asm = self.compact_spu_load_spo_pattern(asm)
     # asm = self.convert_alr_to_ali(asm)
     result = "\n".join([format_asm_row(" ".join(row)) for row in asm])
@@ -758,15 +715,27 @@ class Optimizer:
         continue
 
       if current[0] == "spu" and next[0] == "spo":
+        print("=== compact_spu_spo_pattern")
+        print(current)
+        print(next)
+
         arg_current = current[1]
         arg_next = next[1]
 
+        print("=== arg_current:", arg_current)
+        print("=== arg_next:", arg_next)
+
         if arg_current == arg_next:
+          print("=== pass")
           pass # remove both spu and spo
         else:
+          print("=== mov")
           mov = ["mov", arg_current, arg_next]
           result.append(mov)
+          print("=== mov:", mov)
 
+        print("=== last of result:", result[len(result) - 1])
+        print()
         i += 1
         continue
 
@@ -890,11 +859,11 @@ asm_out = compiler.compile(
   source_py,
 )
 
-optimizer = Optimizer()
-asm_out_optimized = optimizer.optimize(asm_out)
+# optimizer = Optimizer()
+# asm_out_optimized = optimizer.optimize(asm_out)
 
 with open(outfile_path, "w") as f:
   f.write(asm_out)
 
-with open(f"{outfile_path}_optimized", "w") as f:
-  f.write(asm_out_optimized)
+# with open(f"{outfile_path}_optimized", "w") as f:
+#   f.write(asm_out_optimized)
