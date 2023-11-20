@@ -643,6 +643,20 @@ class Compiler(ast.NodeVisitor):
       case other:
         raise Exception(f"Unsupported assign targets: {other}")
 
+  def visit_AugAssign(self, node: ast.AugAssign):
+    op = node.op
+    lhs = node.target
+    rhs = node.value
+
+    if type(lhs) != ast.Name:
+      raise Exception("AugAssign to non-Name lhs not yet supported!")
+
+    # construct bin op and assignment
+    bin_op = ast.BinOp(left=lhs, op=op, right=rhs)
+    assign = ast.Assign(targets=[lhs], value=bin_op)
+
+    self.visit(assign)
+
   def visit_Import(self, node: ast.Import) -> Any:
     match node.names:
       case [ast.alias(name="atk16")]:

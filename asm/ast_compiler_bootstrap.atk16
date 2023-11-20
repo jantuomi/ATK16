@@ -48,7 +48,6 @@
   text_mem       ; 0x19
 
 @label hlt_isr
-  ldi 0x55 RE
   hlt
 
 @label keyboard_isr

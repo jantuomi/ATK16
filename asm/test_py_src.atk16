@@ -85,21 +85,21 @@
 @label int_6
   26
 
-; <ast.FunctionDef object at 0x104f1f370>
+; <ast.FunctionDef object at 0x104969570>
 @label nth_letter
 ; stack frame with offsets
 ; n 0
-; <ast.Return object at 0x104f1f430>
-; <ast.Add object at 0x104ed2c20>
-; BinOp lhs <ast.BinOp object at 0x1051b52a0>
-; <ast.Call object at 0x1051b5270>
-; Builtin call ord [<ast.Constant object at 0x1051b51e0>]
-; <ast.Constant object at 0x1051b51e0>
+; <ast.Return object at 0x1049694b0>
+; <ast.Add object at 0x104686bf0>
+; BinOp lhs <ast.BinOp object at 0x104969480>
+; <ast.Call object at 0x104969450>
+; Builtin call ord [<ast.Constant object at 0x1049693c0>]
+; <ast.Constant object at 0x1049693c0>
   ldi int_0 RC
   ldr RC RC ; int_0 = 65
   spu RC
-; BinOp rhs <ast.BinOp object at 0x1051b52a0>
-; <ast.Name object at 0x1051b51b0> (n)
+; BinOp rhs <ast.BinOp object at 0x104969480>
+; <ast.Name object at 0x104969390> (n)
   ldi 0 RC
   add FP RC RC
   ldr RC RC
@@ -120,12 +120,12 @@
 ; text_mem_addr 1
 ; i 2
   addi SP 3 SP
-; <ast.Assign object at 0x104f1ffd0>
+; <ast.Assign object at 0x1049698d0>
 ; assigning graphics_mode_addr at FP + 0
 ; evaluating value to be assigned
-; <ast.Call object at 0x104f1fa00>
-; Builtin call load [<ast.Name object at 0x104f1f970>]
-; <ast.Name object at 0x104f1f970> (GRAPHICS_MODE_ADDR_P)
+; <ast.Call object at 0x104969870>
+; Builtin call load [<ast.Name object at 0x1049697e0>]
+; <ast.Name object at 0x1049697e0> (GRAPHICS_MODE_ADDR_P)
   ldi graphics_mode_addr_p RC
   ldr RC RC
   spu RC
@@ -138,12 +138,12 @@
   ldi 0 RB
   add RB FP RB
   str RA RB
-; <ast.Assign object at 0x104f1f940>
+; <ast.Assign object at 0x1049697b0>
 ; assigning text_mem_addr at FP + 1
 ; evaluating value to be assigned
-; <ast.Call object at 0x104f1f610>
-; Builtin call load [<ast.Name object at 0x104f1f550>]
-; <ast.Name object at 0x104f1f550> (TEXT_MEM_ADDR_P)
+; <ast.Call object at 0x104969750>
+; Builtin call load [<ast.Name object at 0x1049696c0>]
+; <ast.Name object at 0x1049696c0> (TEXT_MEM_ADDR_P)
   ldi text_mem_addr_p RC
   ldr RC RC
   spu RC
@@ -156,14 +156,14 @@
   ldi 1 RB
   add RB FP RB
   str RA RB
-; <ast.Call object at 0x104f1f4f0>
-; Builtin call store [<ast.Name object at 0x104f1f3d0>, <ast.Name object at 0x104f1f3a0>]
-; <ast.Name object at 0x104f1f3d0> (graphics_mode_addr)
+; <ast.Call object at 0x104969660>
+; Builtin call store [<ast.Name object at 0x1049695d0>, <ast.Name object at 0x1049695a0>]
+; <ast.Name object at 0x1049695d0> (graphics_mode_addr)
   ldi 0 RA
   add FP RA RA
   ldr RA RA
   spu RA
-; <ast.Name object at 0x104f1f3a0> (TEXT_MODE)
+; <ast.Name object at 0x1049695a0> (TEXT_MODE)
   ldi text_mode RA
   ldr RA RA
   spu RA
@@ -174,10 +174,10 @@
   spu RA
 ; popping free-standing Expr result from stack
   spo RA
-; <ast.Assign object at 0x1051b5150>
+; <ast.Assign object at 0x104969330>
 ; assigning i at FP + 2
 ; evaluating value to be assigned
-; <ast.Constant object at 0x1051b50f0>
+; <ast.Constant object at 0x1049692d0>
   ldi 0 RC
   spu RC
 ; assigning stack address (FP + 2) := top of stack
@@ -185,19 +185,19 @@
   ldi 2 RB
   add RB FP RB
   str RA RB
-; <ast.While object at 0x1051b50c0>
+; <ast.While object at 0x1049692a0>
 @label while_test_1
-; <ast.Compare object at 0x1051b5090>
-; <ast.Name object at 0x1051b5060> (i)
+; <ast.Compare object at 0x104969270>
+; <ast.Name object at 0x104969240> (i)
   ldi 2 RB
   add FP RB RB
   ldr RB RB
   spu RB
-; <ast.Constant object at 0x1051b5030>
+; <ast.Constant object at 0x104969210>
   ldi int_6 RB
   ldr RB RB ; int_6 = 26
   spu RB
-; Comparing <ast.Name object at 0x1051b5060> <ast.Lt object at 0x104ed2470> <ast.Constant object at 0x1051b5030>
+; Comparing <ast.Name object at 0x104969240> <ast.Lt object at 0x104686440> <ast.Constant object at 0x104969210>
   spo RC
   spo RB
   sub RB RC RB
@@ -212,17 +212,17 @@
   spo RA
   addi RA 0 RA
   bri zero While_else_2
-; <ast.Call object at 0x1051b4fd0>
-; Builtin call store [<ast.BinOp object at 0x1051b4f40>, <ast.Call object at 0x1051b4eb0>]
-; <ast.Add object at 0x104ed2c20>
-; BinOp lhs <ast.BinOp object at 0x1051b4f40>
-; <ast.Name object at 0x1051b4f10> (text_mem_addr)
+; <ast.Call object at 0x1049691b0>
+; Builtin call store [<ast.BinOp object at 0x104969120>, <ast.Call object at 0x104969090>]
+; <ast.Add object at 0x104686bf0>
+; BinOp lhs <ast.BinOp object at 0x104969120>
+; <ast.Name object at 0x1049690f0> (text_mem_addr)
   ldi 1 RA
   add FP RA RA
   ldr RA RA
   spu RA
-; BinOp rhs <ast.BinOp object at 0x1051b4f40>
-; <ast.Name object at 0x1051b4ee0> (i)
+; BinOp rhs <ast.BinOp object at 0x104969120>
+; <ast.Name object at 0x1049690c0> (i)
   ldi 2 RA
   add FP RA RA
   ldr RA RA
@@ -231,12 +231,12 @@
   spo RA
   add RA RB RA
   spu RA
-; <ast.Call object at 0x1051b4eb0>
+; <ast.Call object at 0x104969090>
 ; Call function nth_letter
   spu FP
   ldi 0 RA
   spu RA
-; <ast.Name object at 0x1051b4e50> (i)
+; <ast.Name object at 0x104969030> (i)
   ldi 2 RA
   add FP RA RA
   ldr RA RA
@@ -259,18 +259,18 @@
   spu RA
 ; popping free-standing Expr result from stack
   spo RA
-; <ast.Assign object at 0x1051b4e20>
+; <ast.Assign object at 0x104968580>
 ; assigning i at FP + 2
 ; evaluating value to be assigned
-; <ast.Add object at 0x104ed2c20>
-; BinOp lhs <ast.BinOp object at 0x1051b4dc0>
-; <ast.Name object at 0x1051b4d90> (i)
+; <ast.Add object at 0x104686bf0>
+; BinOp lhs <ast.BinOp object at 0x104968550>
+; <ast.Name object at 0x104968fd0> (i)
   ldi 2 RC
   add FP RC RC
   ldr RC RC
   spu RC
-; BinOp rhs <ast.BinOp object at 0x1051b4dc0>
-; <ast.Constant object at 0x1051b4d60>
+; BinOp rhs <ast.BinOp object at 0x104968550>
+; <ast.Constant object at 0x104968fa0>
   ldi 1 RC
   spu RC
   spo RD
@@ -285,15 +285,15 @@
   jpi While_test_1
 @label while_else_2
 @label while_end_3
-; <ast.While object at 0x1051b4d30>
+; <ast.While object at 0x104968f70>
 @label while_test_7
-; <ast.Constant object at 0x1051b4d00>
+; <ast.Constant object at 0x104968f40>
   ldi 1 RB
   spu RB
   spo RA
   addi RA 0 RA
   bri zero While_else_8
-; <ast.Pass object at 0x1051b4cd0>
+; <ast.Pass object at 0x104968f10>
   jpi While_test_7
 @label while_else_8
 @label while_end_9
