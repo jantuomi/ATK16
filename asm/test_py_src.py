@@ -8,6 +8,8 @@ GRAPHICS_SPRITE_MODE: ConstWord16 = 2
 GRAPHICS_MODE_PP: ConstWord16 = 0x17
 TEXT_MEM_PP: ConstWord16      = 0x19
 
+TEXT_MEM_PP: ConstWord16      = 0x19
+
 # asm(
 # "@label keyboard_isr"
 # "  spu RA"

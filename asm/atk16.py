@@ -23,3 +23,7 @@ def asm(asm: str):
 def ord(char: Char) -> int:
     """Convert char to int"""
     raise NotImplementedError
+
+def const(word: Word16) -> ConstWord16:
+    """When used in an assignment such as `A = const(0xFF)`, stores the value as a globally accessible constant."""
+    raise NotImplementedError
