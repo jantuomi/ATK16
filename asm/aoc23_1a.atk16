@@ -1,0 +1,554 @@
+;; BEGIN BOOTSTRAP
+
+@use ext_std:*
+
+@let sp              RH   ; stack pointer (points to empty slot at top of stack)
+@let fp              RG   ; frame pointer (points to base of currently active frame)
+
+@let vector_table    0x10
+@let vt_ISR0         0x10 ; ISR0
+@let vt_ISR1         0x11 ; ISR1
+@let vt_ISR2         0x12 ; ISR2
+@let vt_ISR3         0x13 ; ISR3
+@let vt_stack_addr   0x14 ; Stack address
+@let vt_term_pp_addr 0x15 ; Terminal peripheral address
+@let vt_kb_pp_addr   0x16 ; Keyboard peripheral address
+@let vt_gr_mode_addr 0x17 ; Graphics mode setting address
+@let vt_sprite_mem   0x18 ; Sprite memory address
+@let vt_text_mem     0x19 ; Text memory buffer address
+
+@let stack_segment   0x8000
+@let mmio_segment    0xE000
+@let terminal_addr   0xE000
+@let keyboard_addr   0xE001
+@let gr_mode_addr    0xE002
+@let sprite_mem      0xE800
+@let text_mem        0xF800
+
+@let gr_disabled_mode 0b00
+@let gr_text_mode     0b01
+@let gr_sprite_mode   0b10
+
+@address 0x0
+  ldi vt_stack_addr RA
+  ldr RA SP
+  mov SP FP
+  jpi program_segment
+
+@address vector_table
+  keyboard_isr   ; 0x10
+  hlt_isr        ; 0x11
+  hlt_isr        ; 0x12
+  hlt_isr        ; 0x13
+  stack_segment  ; 0x14
+  terminal_addr  ; 0x15
+  keyboard_addr  ; 0x16
+  gr_mode_addr   ; 0x17
+  sprite_mem     ; 0x18
+  text_mem       ; 0x19
+
+@label hlt_isr
+  hlt
+
+@label keyboard_isr
+  spu RA
+  spu RB
+  ldi vt_kb_pp_addr RA
+  ldr RA RA
+  ldr RA RA
+  ldi vt_term_pp_addr RB
+  ldr RB RB
+  str RA RB
+  spo RB
+  spo RA
+  rti
+
+@label program_segment
+  ldi vt_gr_mode_addr RA
+  ldr RA RA
+  ldi gr_disabled_mode RB
+  str RB RA
+
+  jpi main
+
+;; END BOOTSTRAP
+
+@label int_0
+  8
+@label graphics_no_mode
+  0
+@label graphics_text_mode
+  1
+@label graphics_sprite_mode
+  2
+@label graphics_mode_pp
+  23
+@label text_mem_pp
+  25
+@label input_p
+  36864
+@label input_elem_size
+  256
+@label int_1
+  49
+@label int_2
+  97
+@label int_3
+  98
+@label int_4
+  99
+@label int_5
+  50
+
+
+
+@label main
+; stack frame with offsets
+; graphics_mode_p 0
+; text_mem_p 1
+; row_p 2
+; i 3
+; first 4
+; last 5
+; char_p 6
+; char 7
+  ldi int_0 RA
+  ldr RA RA
+  add SP RA SP
+; <ast.Assign object at 0x104353640>
+; assigning graphics_mode_p at FP + 0
+; evaluating value to be assigned
+; <ast.Call object at 0x1043535e0>
+; Builtin call load [<ast.Name object at 0x104353550>]
+; <ast.Name object at 0x104353550> (GRAPHICS_MODE_PP)
+  ldi graphics_mode_pp RC
+  ldr RC RC
+  spu RC
+; (load) dereferencing top of stack
+  spo RC
+  ldr RC RC
+  spu RC
+; assigning stack address (FP + 0) := top of stack
+  spo RA
+  ldi 0 RB
+  add RB FP RB
+  str RA RB
+; <ast.Assign object at 0x104353520>
+; assigning text_mem_p at FP + 1
+; evaluating value to be assigned
+; <ast.Call object at 0x1043534c0>
+; Builtin call load [<ast.Name object at 0x104353430>]
+; <ast.Name object at 0x104353430> (TEXT_MEM_PP)
+  ldi text_mem_pp RC
+  ldr RC RC
+  spu RC
+; (load) dereferencing top of stack
+  spo RC
+  ldr RC RC
+  spu RC
+; assigning stack address (FP + 1) := top of stack
+  spo RA
+  ldi 1 RB
+  add RB FP RB
+  str RA RB
+; <ast.Call object at 0x1043533d0>
+; Builtin call store [<ast.Name object at 0x104353340>, <ast.Name object at 0x104353310>]
+; <ast.Name object at 0x104353340> (graphics_mode_p)
+  ldi 0 RA
+  add FP RA RA
+  ldr RA RA
+  spu RA
+; <ast.Name object at 0x104353310> (GRAPHICS_TEXT_MODE)
+  ldi graphics_text_mode RA
+  ldr RA RA
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+; <ast.Call object at 0x1043530d0>
+; Builtin call store [<ast.BinOp object at 0x104352a40>, <ast.Constant object at 0x104352d40>]
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x104352a40>
+; <ast.Name object at 0x104352da0> (INPUT_P)
+  ldi input_p RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x104352a40>
+; <ast.Constant object at 0x104352d70>
+  ldi 0 RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+; <ast.Constant object at 0x104352d40>
+  ldi int_1 RA
+  ldr RA RA ; int_1 = 49
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+; <ast.Call object at 0x104352cb0>
+; Builtin call store [<ast.BinOp object at 0x104352e60>, <ast.Constant object at 0x104352dd0>]
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x104352e60>
+; <ast.Name object at 0x104352e30> (INPUT_P)
+  ldi input_p RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x104352e60>
+; <ast.Constant object at 0x104352e00>
+  ldi 1 RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+; <ast.Constant object at 0x104352dd0>
+  ldi int_2 RA
+  ldr RA RA ; int_2 = 97
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+; <ast.Call object at 0x104352770>
+; Builtin call store [<ast.BinOp object at 0x1043526b0>, <ast.Constant object at 0x104352620>]
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x1043526b0>
+; <ast.Name object at 0x104352950> (INPUT_P)
+  ldi input_p RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x1043526b0>
+; <ast.Constant object at 0x104352980>
+  ldi 2 RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+; <ast.Constant object at 0x104352620>
+  ldi int_3 RA
+  ldr RA RA ; int_3 = 98
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+; <ast.Call object at 0x1043525c0>
+; Builtin call store [<ast.BinOp object at 0x104352530>, <ast.Constant object at 0x1043524a0>]
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x104352530>
+; <ast.Name object at 0x104352500> (INPUT_P)
+  ldi input_p RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x104352530>
+; <ast.Constant object at 0x1043524d0>
+  ldi 3 RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+; <ast.Constant object at 0x1043524a0>
+  ldi int_4 RA
+  ldr RA RA ; int_4 = 99
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+; <ast.Call object at 0x104352440>
+; Builtin call store [<ast.BinOp object at 0x1043523b0>, <ast.Constant object at 0x1043522f0>]
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x1043523b0>
+; <ast.Name object at 0x104352380> (INPUT_P)
+  ldi input_p RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x1043523b0>
+; <ast.Constant object at 0x104352350>
+  ldi 4 RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+; <ast.Constant object at 0x1043522f0>
+  ldi int_5 RA
+  ldr RA RA ; int_5 = 50
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+; <ast.Call object at 0x1043521d0>
+; Builtin call store [<ast.BinOp object at 0x104352110>, <ast.Constant object at 0x104353040>]
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x104352110>
+; <ast.Name object at 0x1043520e0> (INPUT_P)
+  ldi input_p RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x104352110>
+; <ast.Constant object at 0x104352ec0>
+  ldi 5 RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+; <ast.Constant object at 0x104353040>
+  ldi 0 RA
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+; <ast.Assign object at 0x104353010>
+; assigning row_p at FP + 2
+; evaluating value to be assigned
+; <ast.Name object at 0x104352fb0> (INPUT_P)
+  ldi input_p RC
+  ldr RC RC
+  spu RC
+; assigning stack address (FP + 2) := top of stack
+  spo RA
+  ldi 2 RB
+  add RB FP RB
+  str RA RB
+; <ast.Assign object at 0x104352f80>
+; assigning i at FP + 3
+; evaluating value to be assigned
+; <ast.Constant object at 0x104352f20>
+  ldi 0 RC
+  spu RC
+; assigning stack address (FP + 3) := top of stack
+  spo RA
+  ldi 3 RB
+  add RB FP RB
+  str RA RB
+; <ast.Assign object at 0x104352ef0>
+; assigning first at FP + 4
+; evaluating value to be assigned
+; <ast.Call object at 0x104352830>
+; Builtin call load [<ast.Name object at 0x104352650>]
+; <ast.Name object at 0x104352650> (row_p)
+  ldi 2 RC
+  add FP RC RC
+  ldr RC RC
+  spu RC
+; (load) dereferencing top of stack
+  spo RC
+  ldr RC RC
+  spu RC
+; assigning stack address (FP + 4) := top of stack
+  spo RA
+  ldi 4 RB
+  add RB FP RB
+  str RA RB
+; <ast.Assign object at 0x104352680>
+; assigning last at FP + 5
+; evaluating value to be assigned
+; <ast.Constant object at 0x104352b60>
+  ldi 0 RC
+  spu RC
+; assigning stack address (FP + 5) := top of stack
+  spo RA
+  ldi 5 RB
+  add RB FP RB
+  str RA RB
+; <ast.While object at 0x104352920>
+@label while_test_6
+; <ast.Constant object at 0x1043526e0>
+  ldi 1 RB
+  spu RB
+  spo RA
+  addi RA 0 RA
+  bri zero While_else_7
+; <ast.Assign object at 0x1042d85b0>
+; assigning char_p at FP + 6
+; evaluating value to be assigned
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x1042d8670>
+; <ast.Name object at 0x1042da800> (INPUT_P)
+  ldi input_p RC
+  ldr RC RC
+  spu RC
+; BinOp rhs <ast.BinOp object at 0x1042d8670>
+; <ast.Name object at 0x1042d9570> (i)
+  ldi 3 RC
+  add FP RC RC
+  ldr RC RC
+  spu RC
+  spo RD
+  spo RC
+  add RC RD RC
+  spu RC
+; assigning stack address (FP + 6) := top of stack
+  spo RA
+  ldi 6 RB
+  add RB FP RB
+  str RA RB
+; <ast.Assign object at 0x1042da4a0>
+; assigning char at FP + 7
+; evaluating value to be assigned
+; <ast.Call object at 0x1045e1840>
+; Builtin call load [<ast.Name object at 0x1045e17b0>]
+; <ast.Name object at 0x1045e17b0> (char_p)
+  ldi 6 RC
+  add FP RC RC
+  ldr RC RC
+  spu RC
+; (load) dereferencing top of stack
+  spo RC
+  ldr RC RC
+  spu RC
+; assigning stack address (FP + 7) := top of stack
+  spo RA
+  ldi 7 RB
+  add RB FP RB
+  str RA RB
+; <ast.If object at 0x1045e1780>
+; <ast.Compare object at 0x1045e1750>
+; <ast.Name object at 0x1045e1720> (char)
+  ldi 7 RA
+  add FP RA RA
+  ldr RA RA
+  spu RA
+; <ast.Constant object at 0x1045e16f0>
+  ldi 0 RA
+  spu RA
+; Comparing <ast.Name object at 0x1045e1720> <ast.Eq object at 0x10430e890> <ast.Constant object at 0x1045e16f0>
+  spo RA
+  addi RA 0 RA
+  bri zero If_false_branch_11
+; <ast.Break object at 0x1045e16c0>
+  jpi While_end_8
+  jpi If_end_branch_12
+@label if_false_branch_11
+@label if_end_branch_12
+; <ast.Assign object at 0x1045e1690>
+; assigning last at FP + 5
+; evaluating value to be assigned
+; <ast.Name object at 0x1045e1630> (char)
+  ldi 7 RC
+  add FP RC RC
+  ldr RC RC
+  spu RC
+; assigning stack address (FP + 5) := top of stack
+  spo RA
+  ldi 5 RB
+  add RB FP RB
+  str RA RB
+; <ast.Assign object at 0x104352260>
+; assigning i at FP + 3
+; evaluating value to be assigned
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x104352230>
+; <ast.Name object at 0x1045e15d0> (i)
+  ldi 3 RC
+  add FP RC RC
+  ldr RC RC
+  spu RC
+; BinOp rhs <ast.BinOp object at 0x104352230>
+; <ast.Constant object at 0x1045e15a0>
+  ldi 1 RC
+  spu RC
+  spo RD
+  spo RC
+  add RC RD RC
+  spu RC
+; assigning stack address (FP + 3) := top of stack
+  spo RA
+  ldi 3 RB
+  add RB FP RB
+  str RA RB
+  jpi While_test_6
+@label while_else_7
+@label while_end_8
+; <ast.Call object at 0x1045e1540>
+; Builtin call store [<ast.BinOp object at 0x1045e14b0>, <ast.Name object at 0x1045e1420>]
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x1045e14b0>
+; <ast.Name object at 0x1045e1480> (text_mem_p)
+  ldi 1 RA
+  add FP RA RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x1045e14b0>
+; <ast.Constant object at 0x1045e1450>
+  ldi 0 RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+; <ast.Name object at 0x1045e1420> (first)
+  ldi 4 RA
+  add FP RA RA
+  ldr RA RA
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+; <ast.Call object at 0x1045e13c0>
+; Builtin call store [<ast.BinOp object at 0x1045e1330>, <ast.Name object at 0x1045e12a0>]
+; <ast.Add object at 0x10430ef80>
+; BinOp lhs <ast.BinOp object at 0x1045e1330>
+; <ast.Name object at 0x1045e1300> (text_mem_p)
+  ldi 1 RA
+  add FP RA RA
+  ldr RA RA
+  spu RA
+; BinOp rhs <ast.BinOp object at 0x1045e1330>
+; <ast.Constant object at 0x1045e12d0>
+  ldi 1 RA
+  spu RA
+  spo RB
+  spo RA
+  add RA RB RA
+  spu RA
+; <ast.Name object at 0x1045e12a0> (last)
+  ldi 5 RA
+  add FP RA RA
+  ldr RA RA
+  spu RA
+  spo RB
+  spo RA
+  str RB RA
+  ldi 0 RA
+  spu RA
+; popping free-standing Expr result from stack
+  spo RA
+  mov FP SP
+  hlt

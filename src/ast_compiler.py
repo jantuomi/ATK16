@@ -195,6 +195,18 @@ class Compiler(ast.NodeVisitor):
 
       self.emit(f"spu {reg}")
 
+  def emit_add_imm(self, reg1: str, addend: int, target_reg: str):
+    if addend >= 0 and addend < 8:
+      self.emit(f"addi {reg1} {addend} {target_reg}")
+    else:
+      name = self.get_unique_name("int")
+      self.assign_const(name, addend)
+
+      with self.allocated_reg() as addend_reg:
+        self.emit(f"ldi {name} {addend_reg}")
+        self.emit(f"ldr {addend_reg} {addend_reg}")
+        self.emit(f"add {reg1} {addend_reg} {target_reg}")
+
   def visit_Module(self, node: ast.Module):
     stmts = node.body
     frame_names = self.collect_local_variables(stmts)
@@ -204,7 +216,7 @@ class Compiler(ast.NodeVisitor):
       self.local_bindings[name] = offset
       self.emit(f"; {name} {offset}")
 
-    self.emit(f"addi SP {len(frame_names)} SP")
+    self.emit_add_imm("SP", len(frame_names), "SP")
 
     for stmt in stmts:
       if type(stmt) == ast.Expr and type(stmt.value) != ast.Call:
@@ -510,7 +522,7 @@ class Compiler(ast.NodeVisitor):
 
     # Move stack pointer to accommodate local variables
     if len(local_var_names) > 0:
-      self.emit(f"addi SP {len(local_var_names)} SP")
+      self.emit_add_imm("SP", len(local_var_names), "SP")
 
     prev_local_bindings = self.local_bindings
     self.local_bindings = {}
@@ -666,7 +678,7 @@ class Compiler(ast.NodeVisitor):
         target=ast.Name(name),
         annotation=ast.Attribute(
           value=ast.Name(id="atk16"),
-          attr="ConstInt"),
+          attr="ConstWord16"),
         value=ast.Constant(value) # TODO: constant folding
       ):
         if type(value) == int:

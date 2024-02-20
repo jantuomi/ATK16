@@ -4,7 +4,17 @@ Void = Literal[0]
 Word16 = int
 ConstWord16 = int
 
-def store(p: Word16, value: Word16) -> Void:
+def store(p: Word16, value: Word16 | Char) -> Void:
+    raise NotImplementedError
+
+@overload
+def store_const_vec(p: Word16, value: list[Word16]) -> Void: ...
+@overload
+def store_const_vec(p: Word16, value: list[Char]) -> Void: ...
+@overload
+def store_const_vec(p: Word16, value: str) -> Void: ...
+
+def store_const_vec(p, value) -> Void:
     raise NotImplementedError
 
 def load(p: Word16) -> Word16:
