@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Generate .atk16 assembly from a subset of Python
+# Generate .atk16 assembly from Python bytecode
 
 import sys
 import dis

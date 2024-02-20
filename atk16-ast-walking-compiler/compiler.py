@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 
 if len(sys.argv) != 3:
-  print("usage: ast_compiler.py <infile.py> <outfile.atk16>")
+  print("usage: compiler.py <infile.py> <outfile.atk16>")
   sys.exit(1)
 
 infile_path = sys.argv[1]

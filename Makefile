@@ -8,31 +8,35 @@ start-digital:
 
 # make assemble asm=src/program.atk16 out=out/program.bin
 assemble:
-	$(py) src/assembler.py $(asm) $(out)
+	$(py) atk16-asm/assembler.py $(asm) $(out)
 
 # make gen-ucode out=out/ucode.bin
 gen-ucode:
-	$(py) src/ucode.py $(out)
+	$(py) atk16-utils/ucode.py $(out)
 
 # make gen-charmem out=out/charmem.bin
 gen-charmem:
-	$(py) src/charmem.py $(out)
+	$(py) atk16-utils/charmem.py $(out)
 
 # make convert-ttf in=font.ttf out=charset.txt
 convert-ttf:
-	$(py) src/convert_ttf.py $(in) $(out)
+	$(py) atk16-utils/convert_ttf.py $(in) $(out)
 
 # make dig-install bin=out/program.bin dig=digital/atk16_mem.dig label=MEM_ROM
 dig-install:
-	$(py) src/dig_install.py $(bin) $(dig) $(label)
+	$(py) atk16-utils/dig_install.py $(bin) $(dig) $(label)
 
-# make compile-py-to-atk16 in=asm/test_py_src.py out=asm/test_py_src.atk16
-compile-py-to-atk16:
-	$(py) src/ast_compiler.py $(in) $(out)
+# make ast-compile in=asm/test_py_src.py out=asm/test_py_src.atk16
+ast-compile:
+	$(py) atk16-ast-walking-compiler/compiler.py $(in) $(out)
+
+# make bytecode-compile in=asm/test_py_src.py out=asm/test_py_src.atk16
+bytecode-compile:
+	$(py) atk16-bytecode-compiler/compiler.py $(in) $(out)
 
 # make test
 test:
-	$(py) src/test_alu.py digital/atk16_alu.dig
+	$(py) atk16-asm/test_alu.py digital-diagrams/atk16_alu.dig
 
 run-single-test:
 	java -cp $(digital_path) CLI test -verbose -circ $(circ) -tests $(tests)
