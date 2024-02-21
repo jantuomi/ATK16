@@ -14,6 +14,9 @@ def pad_binary(file_path, target_size) -> int:
   # Calculate needed padding
   padding_size = target_size - current_size
 
+  if padding_size < 0:
+    raise ValueError(f"File is larger than the target size ({current_size} > {target_size}).")
+
   # Append zeros if needed
   if padding_size > 0:
     with open(file_path, 'ab') as file:

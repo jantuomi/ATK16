@@ -1,6 +1,7 @@
 import random
 from typing import Literal
 from dataclasses import dataclass
+import sys
 from .opcodes import *
 
 class Register:
@@ -75,9 +76,6 @@ class ALU:
     pass
 
   def process(self, S: int, L: int, R: int):
-    if S < 0 or S >= 8:
-      raise ValueError(f"Invalid ALU S: {S}")
-
     if L < 0 or L >= 2 ** 16:
       raise ValueError(f"Invalid ALU L: {L}")
 
@@ -94,14 +92,34 @@ class ALU:
           zero = result == 0,
           sign = (result & 0x8000) != 0
         ))
+      case 1: # L - R
+        py_sum = L - R
+        result = py_sum & 0xFFFF
+        return ALUResult(result, ALUFlags(
+          carry = py_sum < 0,
+          overflow = (L & 0x8000) != (R & 0x8000) and (L & 0x8000) != (result & 0x8000),
+          zero = result == 0,
+          sign = (result & 0x8000) != 0
+        ))
+      case 2: # L and R
+        raise NotImplementedError()
+      case 3: # L or R
+        raise NotImplementedError()
+      case 4: # L xor R
+        raise NotImplementedError()
+      case 5: # L >> R logical
+        raise NotImplementedError()
+      case 6: # L >>> R arithmetic
+        raise NotImplementedError()
+      case 7: # L << R
+        raise NotImplementedError()
 
-    raise NotImplementedError(f"{S}")
-
+    raise ValueError(f"Invalid ALU S: {S}")
 
 class Machine:
   def __init__(self):
-    self.rom = ROM(16, 16)
-    self.ram = RAM(16, 16)
+    self.rom = ROM(15, 16)
+    self.ram = RAM(15, 16)
     self.alu = ALU()
 
     self.ra = Register(16)
@@ -125,10 +143,17 @@ class Machine:
 
   def mem_read(self, addr: int):
     if addr < 2 ** 15:
-      return self.rom.read(addr)
+      return self.rom.read(addr & 0x7FFF)
     else:
       # TODO: Implement memory-mapped I/O
-      return self.ram.read(addr)
+      return self.ram.read(addr & 0x7FFF)
+
+  def mem_write(self, addr: int, value: int):
+    if addr < 2 ** 15:
+      raise ValueError(f"Cannot write to ROM, addr: {addr:>04x}")
+    else:
+      # TODO: Implement memory-mapped I/O
+      self.ram.write(addr & 0x7FFF, value)
 
   def get_nth_register(self, n: int) -> Register:
     if n < 0 or n >= 8:
@@ -164,6 +189,15 @@ class Machine:
     while self.running:
       self.step()
 
+  def check_nth_flag(self, n: int) -> bool:
+    match n:
+      case 0: return self.fr.carry
+      case 1: return self.fr.overflow
+      case 2: return self.fr.zero
+      case 3: return self.fr.sign
+
+    raise ValueError(f"Invalid flag number: {n}")
+
   def step(self):
     if not self.running:
       raise RuntimeError("Machine is not running")
@@ -174,31 +208,88 @@ class Machine:
     instr = self.mem_read(pc_addr)
     instruction = self.decode(instr)
 
-    match instruction:
-      case ALR(target, left, right, alu_code):
-        alu_result = self.alu.process(
-          S = alu_code,
-          L = self.get_nth_register(left).value,
-          R = self.get_nth_register(right).value,
-        )
-        self.fr = alu_result.flags
+    try:
+      match instruction:
+        case ALR(target, left, right, alu_code):
+          alu_result = self.alu.process(
+            S = alu_code,
+            L = self.get_nth_register(left).value,
+            R = self.get_nth_register(right).value,
+          )
+          self.fr = alu_result.flags
 
-        target_reg = self.get_nth_register(target)
-        target_reg.value = alu_result.value
+          target_reg = self.get_nth_register(target)
+          target_reg.value = alu_result.value
 
-      case ALI(target, left, imm, alu_code):
-        alu_result = self.alu.process(
-          S = alu_code,
-          L = self.get_nth_register(left).value,
-          R = imm,
-        )
-        self.fr = alu_result.flags
+        case ALI(target, left, imm, alu_code):
+          alu_result = self.alu.process(
+            S = alu_code,
+            L = self.get_nth_register(left).value,
+            R = imm,
+          )
+          self.fr = alu_result.flags
 
-        target_reg = self.get_nth_register(target)
-        target_reg.value = alu_result.value
+          target_reg = self.get_nth_register(target)
+          target_reg.value = alu_result.value
 
-      case HLT():
-        self.running = False
+        case LDR(to_reg, addr_reg):
+          addr = self.get_nth_register(addr_reg).value
+          value = self.mem_read(addr)
+
+          target_reg = self.get_nth_register(to_reg)
+          target_reg.value = value
+
+        case STR(addr_reg, from_reg):
+          addr = self.get_nth_register(addr_reg).value
+          value = self.get_nth_register(from_reg).value
+
+          self.mem_write(addr, value)
+
+        case LDI(to_reg, imm):
+          target_reg = self.get_nth_register(to_reg)
+          target_reg.value = imm
+
+        case JPR(addr_reg):
+          addr = self.get_nth_register(addr_reg).value
+          self.pc.value = addr
+
+        case JPI(imm):
+          self.pc.value = (self.pc.value + imm) & 0xFFFF
+
+        case BRR(flag, addr_reg):
+          if self.check_nth_flag(flag):
+            addr = self.get_nth_register(addr_reg).value
+            self.pc.value = addr
+
+        case BRI(flag, addr_imm):
+          if self.check_nth_flag(flag):
+            self.pc.value = (self.pc.value + addr_imm) & 0xFFFF
+
+        case LPC(target_reg):
+          target_reg = self.get_nth_register(target_reg)
+          target_reg.value = self.pc.value
+
+        case NOP():
+          pass
+
+        case ISRP0():
+          # interrupt service routine, read store PC in IPC register, set PC to ISRA value
+          raise NotImplementedError()
+
+        case ISRP1():
+          # interrupt service routine, read store PC in IPC register, set PC to ISRA value
+          raise NotImplementedError()
+
+        case RTI():
+          # return from interrupt routine, read PC from IPC register
+          raise NotImplementedError()
+
+        case HLT():
+          self.running = False
+
+    except:
+      print(f"Error while executing instruction {instr:>016b} at address {pc_addr:>04x}", file=sys.stderr)
+      raise
 
   def decode(self, instr: int):
     opcode = (instr & 0xF000) >> 12
@@ -208,7 +299,28 @@ class Machine:
                               left=(opdata & 0b000111000000) >> 6,
                               right=(opdata & 0b000000111000) >> 3,
                               alu_code=opdata & 0b000000000111)
+      case 0b0001: return ALI(target=(opdata & 0b111000000000) >> 9,
+                              left=(opdata & 0b000111000000) >> 6,
+                              imm=(opdata & 0b000000111000) >> 3,
+                              alu_code=opdata & 0b000000000111)
+      case 0b0010: return LDR(to_reg=(opdata & 0b111000000000) >> 9,
+                              addr_reg=(opdata & 0b000111000000) >> 6)
+      case 0b0011: return STR(addr_reg=(opdata & 0b000111000000) >> 6,
+                              from_reg=(opdata & 0b000000111000) >> 3)
+      case 0b0100: return LDI(to_reg=(opdata & 0b111000000000) >> 9,
+                              imm=opdata & 0b000111111111)
+      case 0b0101: return JPR(addr_reg=(opdata & 0b000111000000) >> 6)
+      case 0b0110: return JPI(imm=opdata & 0b000111111111)
+      case 0b0111: return BRR(flag=(opdata & 0b011000000000) >> 9,
+                              addr_reg=(opdata & 0b000111000000) >> 6)
+      case 0b1000: return BRI(flag=(opdata & 0b011000000000) >> 9,
+                              addr_imm=opdata & 0b000111111111)
+      case 0b1001: return LPC(target_reg=(opdata & 0b111000000000) >> 9)
+      case 0b1010: return NOP()
+      case 0b1011: return NOP()
+      case 0b1100: return ISRP0()
+      case 0b1101: return ISRP1()
+      case 0b1110: return RTI()
       case 0b1111: return HLT()
-      # TODO: Implement other opcodes
 
-    raise ValueError(f"Invalid instruction: {instr:>16b}")
+    raise ValueError(f"Invalid instruction: {instr:>016b}")
