@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: emu module",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "module": "atk16_emu.cli",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["out/just_hlt.bin"]
+            "args": ["out/sum.bin"]
         }
     ]
 }

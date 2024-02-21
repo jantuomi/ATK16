@@ -38,9 +38,13 @@ bytecode-compile:
 emu:
 	$(py) -m atk16_emu.cli $(in)
 
+# make test-digital-alu
+test-digital-alu:
+	$(py) atk16_asm/test_alu.py digital_diagrams/atk16_alu.dig
+
 # make test
 test:
-	$(py) atk16_asm/test_alu.py digital_diagrams/atk16_alu.dig
+	pytest --ignore resources
 
 run-single-test:
 	java -cp $(digital_path) CLI test -verbose -circ $(circ) -tests $(tests)

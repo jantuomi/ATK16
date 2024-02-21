@@ -288,7 +288,7 @@ class Machine:
           self.running = False
 
     except:
-      print(f"Error while executing instruction {instr:>016b} at address {pc_addr:>04x}", file=sys.stderr)
+      print(f"Error while executing instruction {instr:>016b} ({instr:>04x}) at address {pc_addr:>04x}", file=sys.stderr)
       raise
 
   def decode(self, instr: int):
@@ -305,8 +305,8 @@ class Machine:
                               alu_code=opdata & 0b000000000111)
       case 0b0010: return LDR(to_reg=(opdata & 0b111000000000) >> 9,
                               addr_reg=(opdata & 0b000111000000) >> 6)
-      case 0b0011: return STR(addr_reg=(opdata & 0b000111000000) >> 6,
-                              from_reg=(opdata & 0b000000111000) >> 3)
+      case 0b0011: return STR(from_reg=(opdata & 0b000111000000) >> 6,
+                              addr_reg=(opdata & 0b000000111000) >> 3)
       case 0b0100: return LDI(to_reg=(opdata & 0b111000000000) >> 9,
                               imm=opdata & 0b000111111111)
       case 0b0101: return JPR(addr_reg=(opdata & 0b000111000000) >> 6)
@@ -323,4 +323,4 @@ class Machine:
       case 0b1110: return RTI()
       case 0b1111: return HLT()
 
-    raise ValueError(f"Invalid instruction: {instr:>016b}")
+    raise ValueError(f"Invalid instruction: {instr:>016b} ({instr:>04x})")
