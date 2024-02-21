@@ -36,7 +36,7 @@ bytecode-compile:
 
 # make emu in=rom.bin
 emu:
-	$(py) atk16_emu/cli.py $(in)
+	$(py) -m atk16_emu.cli $(in)
 
 # make test
 test:

@@ -1,7 +1,7 @@
 import random
 from typing import Literal
 from dataclasses import dataclass
-from atk16_emu.opcodes import *
+from .opcodes import *
 
 class Register:
   def __init__(self, bits: int):
@@ -212,23 +212,3 @@ class Machine:
       # TODO: Implement other opcodes
 
     raise ValueError(f"Invalid instruction: {instr:>16b}")
-
-  def get_system_state(self):
-    return {
-      "running": self.running,
-
-      "ra": self.ra.value,
-      "rb": self.rb.value,
-      "rc": self.rc.value,
-      "rd": self.rd.value,
-      "re": self.re.value,
-      "rf": self.rf.value,
-      "rg": self.rg.value,
-      "rh": self.rh.value,
-
-      "pc": self.pc.value,
-      "fr": self.fr,
-
-      #"rom": self.rom.memory,
-      #"ram": self.ram.memory,
-    }

@@ -1,6 +1,6 @@
 import sys
 from dataclasses import dataclass
-from emu import Machine
+from .emu import Machine
 
 @dataclass
 class Options:
@@ -47,4 +47,3 @@ machine = Machine()
 machine.load_rom_image(rom_image)
 machine.reset()
 machine.run_until_halted()
-print(machine.get_system_state())
