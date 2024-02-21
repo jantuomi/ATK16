@@ -83,7 +83,7 @@ ucode = [
   not_branch([IM_EN|PC_OE|IPC_IE, ISRA_OE|MAR_IE, MEM_OE|PC_IE, US_RS, 0, 0, 0, 0]),
   # ISRP1 1101 XXXX XXXX XXXX
   not_branch([IM_EN|PC_OE|IPC_IE, ISRA_OE|MAR_IE, MEM_OE|PC_IE, US_RS, 0, 0, 0, 0]),
-  # RTI   1110 XXXX XXXX XXXX
+  # RTI 1110 XXXX XXXX XXXX
   not_branch([*fetch, IM_DS|IPC_OE|PC_IE, US_RS, 0, 0, 0, 0]),
   # HLT 1111 XXXX XXXX XXXX
   not_branch([*fetch, HALT, 0, 0, 0, 0, 0]),

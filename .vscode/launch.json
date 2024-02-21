@@ -11,7 +11,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["src/test.atk16", "out/test.bin"]
+            "args": ["out/just_hlt.bin"]
         }
     ]
 }

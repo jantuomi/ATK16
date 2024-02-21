@@ -34,6 +34,10 @@ ast-compile:
 bytecode-compile:
 	$(py) atk16-bytecode-compiler/compiler.py $(in) $(out)
 
+# make emu in=rom.bin
+emu:
+	$(py) atk16-emu/cli.py $(in)
+
 # make test
 test:
 	$(py) atk16-asm/test_alu.py digital-diagrams/atk16_alu.dig
