@@ -184,7 +184,7 @@ class Machine:
     self.running = True
 
   def run_until_halted(self):
-    "Run the machine until HLT instruction is encountered"
+    "Run the self until HLT instruction is encountered"
     self.running = True
     while self.running:
       self.step()
@@ -324,3 +324,17 @@ class Machine:
       case 0b1111: return HLT()
 
     raise ValueError(f"Invalid instruction: {instr:>016b} ({instr:>04x})")
+
+  def print_state_summary(self):
+    for i in range(8):
+      reg_name = f"r{chr(ord('a') + i)}"
+      value = getattr(self, reg_name).value
+      print(f"{reg_name.upper()}: 0x{value:>04x} ({value})")
+
+    print(f"PC: 0x{self.pc.value:>04x} ({self.pc.value})")
+    print(f"FR: carry={self.fr.carry}\n    "
+          f"overflow={self.fr.overflow}\n    "
+          f"zero={self.fr.zero}\n    "
+          f"sign={self.fr.sign}")
+    for i in range(8):
+      print(f"RAM[{i}]: 0x{self.ram.read(i):>04x} ({self.ram.read(i)})")

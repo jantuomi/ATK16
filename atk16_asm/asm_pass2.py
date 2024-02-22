@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from asm_ops import *
-from asm_eval import *
-from asm_pass1 import *
+from .asm_ops import *
+from .asm_eval import *
+from .asm_pass1 import *
 
 @dataclass
 class Result2Line:

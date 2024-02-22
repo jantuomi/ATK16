@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 import os.path
-from asm_ops import *
-from asm_eval import *
-from tokenizer import *
+from .asm_ops import *
+from .asm_eval import *
+from .tokenizer import *
 
 @dataclass
 class Result0Line:

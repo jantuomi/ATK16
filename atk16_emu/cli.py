@@ -51,15 +51,4 @@ machine.run_until_halted()
 print("Machine halted.")
 print("===============")
 
-for i in range(8):
-  reg_name = f"r{chr(ord('a') + i)}"
-  value = getattr(machine, reg_name).value
-  print(f"{reg_name.upper()}: 0x{value:>04x} ({value})")
-
-print(f"PC: 0x{machine.pc.value:>04x} ({machine.pc.value})")
-print(f"FR: carry={machine.fr.carry}\n    "
-      f"overflow={machine.fr.overflow}\n    "
-      f"zero={machine.fr.zero}\n    "
-      f"sign={machine.fr.sign}")
-for i in range(8):
-  print(f"RAM[{i}]: 0x{machine.ram.read(i):>04x} ({machine.ram.read(i)})")
+machine.print_state_summary()

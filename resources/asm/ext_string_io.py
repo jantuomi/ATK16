@@ -1,5 +1,4 @@
-from asm_ops import *
-from ext_std import *
+from atk16_asm.asm_ops import *
 
 def to_char_code(c: str):
   return ord(c)

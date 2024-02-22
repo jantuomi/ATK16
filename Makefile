@@ -1,4 +1,4 @@
-.PHONY: all
+.PHONY: all test
 
 py = /usr/bin/env python3
 digital_path = $(HOME)/.local/share/Digital/digital.jar

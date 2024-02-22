@@ -1,4 +1,4 @@
-from tokenizer import tokenize
+from .tokenizer import tokenize
 
 def format_asm_row(asm: str) -> str:
   if not (asm.startswith("@") or asm.startswith(";")) and not asm.startswith("  ") and len(asm) > 0:

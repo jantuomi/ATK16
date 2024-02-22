@@ -1,5 +1,5 @@
-from ..emu import Machine
-from .utils import make_rom
+from atk16_emu import Machine
+from test.utils import make_rom
 
 def test_alr_add_small_unsigned():
   machine = Machine()

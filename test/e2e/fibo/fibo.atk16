@@ -1,0 +1,53 @@
+; bootstrap code (must be called to setup mandatory data)
+; will jump to label main
+@include bootstrap
+
+@label main
+; call fibo subroutine with parameter 10
+  ldi 10 RA
+  spush RA
+  call fibo
+  spop RA
+  hlt
+
+@label fibo
+; % n -> % result
+
+; store RB, RC on stack
+  spush RB
+  spush RC
+; if n < 2, return n
+  subi RA 2 RA
+  bri sign fibo_early
+; store also RD on stack
+  spush RD
+; a = 0
+  ldi 0 RB
+; b = 1
+  ldi 1 RC
+@label fibo_loop
+; v = a + b
+  add RB RC RD
+; a = b
+  mov RC RB
+; b = v
+  mov RD RC
+; n -= 1
+  dec RA
+; loop while n > 0
+  bri zero fibo_done
+  jpi fibo_loop
+@label fibo_early
+; restore used registers
+  spop RC
+  spop RB
+; return from subroutine
+  return
+@label fibo_done
+  mov RD RA
+; restore used registers
+  spop RD
+  spop RC
+  spop RB
+; return from subroutine
+  return

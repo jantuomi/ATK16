@@ -2,10 +2,10 @@ import importlib
 import sys
 import os.path
 from dataclasses import dataclass
-from asm_ops import *
-from asm_eval import *
-from asm_pass0 import *
-from tokenizer import tokenize
+from .asm_ops import *
+from .asm_eval import *
+from .asm_pass0 import *
+from .tokenizer import tokenize
 
 @dataclass
 class Result1Line:
@@ -20,7 +20,7 @@ class Result1:
 
 def pass_1(result0: Result0) -> Result1:
   result_lines: list[Result1Line] = []
-  operations: OpExpansionDict = default_expansions.copy()
+  operations: OpExpansionDict = expansions.copy()
 
   for line in result0.lines:
     keyword, *args = tokenize(line.line)

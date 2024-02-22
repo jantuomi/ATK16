@@ -1,4 +1,4 @@
-def pad_bytearray(to_length: int, ba: bytearray) -> bytearray:
+def pad_bytearray(ba: bytearray, to_length: int = 64 * 1024) -> bytearray:
   """
   Pads a bytearray with zeros until it reaches a specified length.
 
@@ -22,4 +22,4 @@ def make_rom(words: list[int]) -> bytearray:
   for word in words:
     bytes.append((word >> 8) & 0xFF)
     bytes.append(word & 0xFF)
-  return pad_bytearray(64 * 1024, bytearray(bytes))
+  return pad_bytearray(bytearray(bytes))
