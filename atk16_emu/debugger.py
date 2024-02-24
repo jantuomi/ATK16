@@ -76,11 +76,19 @@ class Debugger:
         else:
           self.breakpoints.add(addr)
       elif cmd == "n":
+        if not self.machine.running:
+          print("Machine halted.")
+          continue
+
         self.machine.step()
+
+        if not self.machine.running:
+          print("Machine halted.")
       elif cmd == "s":
         self.machine.print_state_summary()
       elif cmd == "0":
         self.machine.reset()
+        self.machine.run()
         print("Machine reset.")
       else:
         print(f"Unknown command: {cmd}")

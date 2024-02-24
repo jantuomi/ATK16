@@ -9,6 +9,7 @@ from .asm_pass1 import pass_1
 from .asm_pass2 import pass_2
 from .asm_pass3 import pass_3
 from .asm_pass4 import pass_4
+from .pad_bin import pad_binary
 
 def assemble(source: str, file_name: str) -> bytearray:
   src_lines = source.splitlines()
@@ -41,7 +42,7 @@ def assemble(source: str, file_name: str) -> bytearray:
 
   return result
 
-if __name__ == "__main__":
+def main():
   if len(sys.argv) != 3:
     print("usage: assembler.py <infile> <outfile> # read from file")
     print("       assembler.py - <outfile>        # read from stdin")
@@ -59,7 +60,13 @@ if __name__ == "__main__":
       src = f.read()
 
   result = assemble(src, infile_path)
+
   with open(outfile_path, "wb") as f:
     f.write(result)
 
-  print(f"Wrote {len(result)} bytes to {outfile_path}")
+  pad_binary(outfile_path, 64 * 1024)
+
+  print(f"Wrote 64 KB to {outfile_path} ({len(result)} B without padding)")
+
+if __name__ == "__main__":
+  main()
