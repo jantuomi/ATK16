@@ -12,15 +12,43 @@ class Result3Line:
   original_parts: list[str]
 
 @dataclass
+class DbgSourceInfo:
+  src_file: str
+  line_num: int
+  expanded_text: str
+  original_text: str
+
+DbgLabelTable = dict[int, list[str]]
+DbgSourceTable = dict[int, DbgSourceInfo]
+
+@dataclass
 class Result3:
   lines: list[Result3Line]
   operations: OpExpansionDict
   symbols: dict[str, int]
+  dbg_label_table: DbgLabelTable
+  dbg_source_table: DbgSourceTable
 
 def pass_3(result2: Result2) -> Result3:
   result_lines: list[Result3Line] = []
   symbols: dict[str, int] = {}
   address = 0
+  dbg_label_table: DbgLabelTable = {}
+  dbg_source_table: DbgSourceTable = {}
+
+  def save_dbg_label(addr: int, label: str):
+    if addr in dbg_label_table:
+      dbg_label_table[addr].append(label)
+    else:
+      dbg_label_table[addr] = [label]
+
+  def save_dbg_source(addr: int, src_file: str, line_num: int, expanded_text: str, original_text: str):
+    dbg_source_table[addr] = DbgSourceInfo(
+      src_file=src_file,
+      line_num=line_num,
+      expanded_text=expanded_text,
+      original_text=original_text,
+    )
 
   for line in result2.lines:
     keyword, *args = line.parts
@@ -33,11 +61,15 @@ def pass_3(result2: Result2) -> Result3:
         if label in symbols:
           raise Exception(f"When defining label {label} as {address:>04x}, symbol {label} already defined as {symbols[label]:>04x}")
         symbols[args[0]] = address
+        save_dbg_label(address, label)
         continue
       case "@let":
         symbols[args[0]] = eval_expr(symbols, args[1])
         continue
       case _:
+        dbg_original_text = " ".join(line.original_parts)
+        dbg_expanded_text = " ".join(line.parts)
+        save_dbg_source(address, line.src_file, line.line_num, dbg_expanded_text, dbg_original_text)
         result_lines.append(Result3Line(
           line_num=line.line_num,
           src_file=line.src_file,
@@ -54,10 +86,13 @@ def pass_3(result2: Result2) -> Result3:
     if n > 1:
       formatted = format_overlapping_rows(rows_with_same_addr)
       raise Exception(f"Overlapping segments: address 0x{result_line.address:>04x} has conflicting definitions:\n{formatted}")
+
   return Result3(
     operations=result2.operations,
     lines=result_lines,
     symbols=symbols,
+    dbg_label_table=dbg_label_table,
+    dbg_source_table=dbg_source_table,
   )
 
 def format_overlapping_rows(rows: list[Result3Line]) -> str:

@@ -17,6 +17,8 @@ class Result4:
   lines: list[Result4Line]
   operations: OpExpansionDict
   symbols: dict[str, int]
+  dbg_label_table: DbgLabelTable
+  dbg_source_table: DbgSourceTable
 
 def pass_4(result3: Result3) -> Result4:
   result_lines: list[Result4Line] = []
@@ -32,7 +34,10 @@ def pass_4(result3: Result3) -> Result4:
 
     if keyword in operations:
       fn = operations[keyword]
-      word = fn(meta, result3.symbols, *args)
+      try:
+        word = fn(meta, result3.symbols, *args)
+      except Exception as e:
+        raise Exception(f"Invalid assembly at {line.src_file}:{line.line_num + 1}\n\n{line.parts}\n\n{e}") from e
       result_lines.append(Result4Line(
         line_num=line.line_num,
         src_file=line.src_file,
@@ -58,4 +63,6 @@ def pass_4(result3: Result3) -> Result4:
     operations=result3.operations,
     symbols=result3.symbols,
     lines=result_lines,
+    dbg_label_table=result3.dbg_label_table,
+    dbg_source_table=result3.dbg_source_table,
   )

@@ -48,10 +48,7 @@ test:
 	pytest --ignore resources
 
 install:
-	mkdir -p "$(PREFIX)/share/atk16/asm"
-	cp atk16_asm/*.py "$(PREFIX)/share/atk16/asm/"
-	printf "#!/bin/sh\ncd \"$(PREFIX)/share/atk16\"\n/usr/bin/env python -m asm.assembler \$$@\n" > "$(PREFIX)/bin/atk16c"
-	chmod +x "$(PREFIX)/bin/atk16c"
+	pip install .
 
 run-single-test:
 	java -cp $(digital_path) CLI test -verbose -circ $(circ) -tests $(tests)

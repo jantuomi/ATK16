@@ -39,13 +39,10 @@ def main():
     print_help()
     sys.exit(1)
 
-  def load_rom_image_from_path(path: str) -> bytearray:
-    with open(path, "rb") as f:
-      return bytearray(f.read())
-
-  rom_image = load_rom_image_from_path(options.rom_image_path)
-
   if not options.debugger_enabled:
+    with open(options.rom_image_path, "rb") as f:
+      rom_image = bytearray(f.read())
+
     machine = Machine()
     machine.load_rom_image(rom_image)
     machine.reset()
@@ -58,7 +55,7 @@ def main():
 
   else:
     debugger = Debugger()
-    debugger.load_rom_image(rom_image)
+    debugger.load_rom_image(options.rom_image_path)
     debugger.activate()
 
 if __name__ == "__main__":

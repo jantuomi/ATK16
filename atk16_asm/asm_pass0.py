@@ -15,9 +15,12 @@ class Result0:
   lines: list[Result0Line]
 
 def pass_0(lines: list[str], file_name: str) -> Result0:
+  file_name = file_name if file_name.endswith(".atk16") else file_name + ".atk16"
   result_lines: list[Result0Line] = []
 
   for (line_num, line) in enumerate(lines):
+    line_num += 1 # line numbers are 1-based
+
     line = line.split(";")[0].strip()
     if line == "": continue
 
@@ -25,8 +28,8 @@ def pass_0(lines: list[str], file_name: str) -> Result0:
 
     match keyword:
       case "@include":
-        asm_file_name = args[0]
-        path = os.path.join(os.path.dirname(file_name), asm_file_name + ".atk16")
+        asm_file_name = args[0] if args[0].endswith(".atk16") else args[0] + ".atk16"
+        path = os.path.join(os.path.dirname(file_name), asm_file_name)
         with open(path, "r") as f:
           incl_lines = f.readlines()
 
