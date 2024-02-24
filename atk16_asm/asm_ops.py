@@ -10,6 +10,13 @@ OpExpansionDict = dict[str, ExpandFn]
 class Meta:
   address: int
 
+generate_unique_label_counter = 0
+def generate_unique_label(prefix: str) -> str:
+  global generate_unique_label_counter
+  label = f"{prefix}_{generate_unique_label_counter}"
+  generate_unique_label_counter += 1
+  return label
+
 def make_alr(meta: Meta, symbols: Symbols, alu_op: str, left: str, right: str, target: str) -> int:
   """ALR 0000 TTTL LLRR RSSS"""
   target_e = eval_expr(symbols, target, bits=3)
@@ -215,25 +222,25 @@ def expand_sinc(imm: str) -> ExpandResult:
 def expand_sdec(imm: str) -> ExpandResult:
   return expand_subi("SP", imm, "SP")
 
-def expand_csr(addr_reg: str, stratch_reg: str) -> ExpandResult:
+def expand_callr(addr_reg: str) -> ExpandResult:
   return [
-    ["lpc", stratch_reg],
-    *expand_addi(stratch_reg, "4", stratch_reg),
-    *expand_spu(stratch_reg),
+    ["lpc", "RG"],
+    *expand_addi("RG", "4", "RG"),
+    *expand_spu("RG"),
     ["jpr", addr_reg]
   ]
 
-def expand_csi(addr_imm: str, stratch_reg: str) -> ExpandResult:
+def expand_calli(addr_imm: str) -> ExpandResult:
+  ret_label = generate_unique_label(prefix="calli_return")
   return [
-    ["lpc", stratch_reg],
-    *expand_addi(stratch_reg, "4", stratch_reg),
-    *expand_spu(stratch_reg),
-    ["jpi", addr_imm]
+    ["ldi", ret_label, "RG"],
+    *expand_spu("RG"),
+    ["jpi", addr_imm],
+    ["@label", ret_label]
   ]
 
-def expand_rsr(stratch_reg: str) -> ExpandResult:
-  return expand_spo(stratch_reg) + [["jpr", stratch_reg]]
-
+def expand_return() -> ExpandResult:
+  return expand_spo("RG") + [["jpr", "RG"]]
 
 def stack_stash(*rs: str) -> ExpandResult:
   result: ExpandResult = []
@@ -245,17 +252,17 @@ def stack_stash(*rs: str) -> ExpandResult:
 def stack_restore(*rs: str) -> ExpandResult:
   result: ExpandResult = []
   for r in rs:
-    prefix = expand_spu(r)
+    prefix = expand_spo(r)
     result = prefix + result
 
   return result
 
 def set_graphics_mode(mode: str) -> ExpandResult:
   return [
-    ["ldi", "vt_gr_mode_addr", "RA"],
-    ["ldr", "RA", "RA"],
-    ["ldi", mode, "RB"],
-    ["str", "RB", "RA"],
+    ["ldi", "vt_gr_mode_addr", "RF"],
+    ["ldr", "RF", "RF"],
+    ["ldi", mode, "RG"],
+    ["str", "RG", "RF"],
   ]
 
 expansions: OpExpansionDict = {
@@ -298,11 +305,10 @@ expansions: OpExpansionDict = {
   "spo": expand_spo,
   "sinc": expand_sinc,
   "sdec": expand_sdec,
-  "csr": expand_csr,
-  "csi": expand_csi,
-  "rsr": expand_rsr,
+  "callr": expand_callr,
+  "calli": expand_calli,
+  "return": expand_return,
   "stack_stash": stack_stash,
   "stack_restore": stack_restore,
   "set_graphics_mode": set_graphics_mode,
 }
-

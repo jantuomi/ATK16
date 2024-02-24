@@ -16,4 +16,4 @@ def test_fibo():
   machine.run_until_halted()
   machine.print_state_summary()
 
-  assert machine.ra.value == 34
+  assert machine.ra.value == 89

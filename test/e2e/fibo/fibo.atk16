@@ -3,51 +3,30 @@
 @include bootstrap
 
 @label main
-; call fibo subroutine with parameter 10
   ldi 10 RA
-  spush RA
-  call fibo
-  spop RA
+  calli fibo                   ; call fibo subroutine with parameter 10
   hlt
 
-@label fibo
-; % n -> % result
+@label fibo                   ; fibo(n) subroutine
+                              ; arguments: n (RA)
+                              ; return: fibo(n) (RA)
 
-; store RB, RC on stack
-  spush RB
-  spush RC
-; if n < 2, return n
-  subi RA 2 RA
-  bri sign fibo_early
-; store also RD on stack
-  spush RD
-; a = 0
-  ldi 0 RB
-; b = 1
-  ldi 1 RC
+  stack_stash RB RC RD        ; store RB, RC on stack
+  subi RA 2 RB
+  bri sign fibo_early         ; if n < 2, return n
+  ldi 0 RB                    ; a = 0
+  ldi 1 RC                    ; b = 1
 @label fibo_loop
-; v = a + b
-  add RB RC RD
-; a = b
-  mov RC RB
-; b = v
-  mov RD RC
-; n -= 1
-  dec RA
-; loop while n > 0
+  add RB RC RD                ; v = a + b
+  mov RC RB                   ; a = b
+  mov RD RC                   ; b = v
+  dec RA                      ; n -= 1
   bri zero fibo_done
-  jpi fibo_loop
+  jpi fibo_loop               ; loop while n > 0
 @label fibo_early
-; restore used registers
-  spop RC
-  spop RB
-; return from subroutine
-  return
+  stack_restore RB RC RD      ; restore used registers
+  return                      ; return from subroutine
 @label fibo_done
-  mov RD RA
-; restore used registers
-  spop RD
-  spop RC
-  spop RB
-; return from subroutine
+  mov RD RA                   ; restore used registers
+  stack_restore RB RC RD      ; return from subroutine
   return

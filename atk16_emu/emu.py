@@ -208,6 +208,8 @@ class Machine:
     instr = self.mem_read(pc_addr)
     instruction = self.decode(instr)
 
+    #print(f"Executing instruction 0b{instr:>016b} (0x{instr:>04x}) at address 0x{pc_addr:>04x}")
+
     try:
       match instruction:
         case ALR(target, left, right, alu_code):
@@ -254,6 +256,8 @@ class Machine:
           self.pc.value = addr
 
         case JPI(imm):
+          # convert imm from signed (twos complement) 9-bit to a python int
+          imm = (imm & (0b011111111)) - (imm & 0b100000000)
           self.pc.value = (self.pc.value + imm) & 0xFFFF
 
         case BRR(flag, addr_reg):
@@ -262,6 +266,8 @@ class Machine:
             self.pc.value = addr
 
         case BRI(flag, addr_imm):
+          # convert imm from signed (twos complement) 9-bit to a python int
+          addr_imm = (addr_imm & (0b011111111)) - (addr_imm & 0b100000000)
           if self.check_nth_flag(flag):
             self.pc.value = (self.pc.value + addr_imm) & 0xFFFF
 
@@ -288,7 +294,7 @@ class Machine:
           self.running = False
 
     except:
-      print(f"Error while executing instruction {instr:>016b} ({instr:>04x}) at address {pc_addr:>04x}", file=sys.stderr)
+      print(f"Error while executing instruction 0b{instr:>016b} (0x{instr:>04x}) at address 0x{pc_addr:>04x}", file=sys.stderr)
       raise
 
   def decode(self, instr: int):

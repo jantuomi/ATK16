@@ -1,6 +1,7 @@
 import sys
 from dataclasses import dataclass
 from .emu import Machine
+from .debugger import Debugger
 
 @dataclass
 class Options:
@@ -43,12 +44,18 @@ def load_rom_image_from_path(path: str) -> bytearray:
 
 rom_image = load_rom_image_from_path(options.rom_image_path)
 
-machine = Machine()
-machine.load_rom_image(rom_image)
-machine.reset()
-machine.run_until_halted()
+if not options.debugger_enabled:
+  machine = Machine()
+  machine.load_rom_image(rom_image)
+  machine.reset()
+  machine.run_until_halted()
 
-print("Machine halted.")
-print("===============")
+  print("Machine halted.")
+  print("===============")
 
-machine.print_state_summary()
+  machine.print_state_summary()
+
+else:
+  debugger = Debugger()
+  debugger.load_rom_image(rom_image)
+  debugger.activate()
