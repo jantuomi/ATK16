@@ -9,6 +9,16 @@ class DbgAddrInfo:
   original_text: str
   labels: list[str]
 
+def try_parse_num(s: str) -> int | None:
+  if s.startswith("0x"):
+    return int(s[2:], 16)
+  elif s.startswith("0b"):
+    return int(s[2:], 2)
+  elif s.isdigit():
+    return int(s)
+  else:
+    return None
+
 class Debugger:
   def __init__(self):
     self.rom_image = None
@@ -61,6 +71,45 @@ class Debugger:
         labels=labels,
       )
 
+    print(f"Loaded debug info for from \"{dbg_symbols_path}\".")
+
+  def query_breakpoint(self) -> int | None:
+    input_ = input("Breakpoint address: ")
+    as_number = try_parse_num(input_)
+    if input_ == "":
+      return None
+
+    # address breakpoint
+    if as_number is not None:
+      return as_number
+
+    # line breakpoint
+    if ":" in input_:
+      file_name, line_num = input_.strip().split(":")
+      for addr, dbg_info in self.dbg_addr_info.items():
+        if dbg_info.src_info == f"{file_name}:{line_num}":
+          return addr
+
+      return None
+
+    # label breakpoint
+    for addr, dbg_info in self.dbg_addr_info.items():
+      if input_ in dbg_info.labels:
+        return addr
+
+  def print_breakpoints(self):
+    for addr in self.breakpoints:
+      if addr in self.dbg_addr_info and len(self.dbg_addr_info[addr].labels) > 0:
+        label_suffix = f" [{' '.join(self.dbg_addr_info[addr].labels)}] ({self.dbg_addr_info[addr].src_info})"
+      else:
+        label_suffix = ""
+      print(f"  0x{addr:>04x}{label_suffix}")
+
+    if len(self.breakpoints) == 0:
+        print("<no breakpoints>")
+
+    print()
+
   def print_pc_context(self):
     print("=== Program context")
     for i in range(-4, 5):
@@ -100,7 +149,7 @@ class Debugger:
         self.print_help()
 
       elif cmd == "l":
-        load_path = input(f"Path to rom image [default: {self.rom_image_path}]: ")
+        load_path = input(f"Path to ROM image [default: {self.rom_image_path}]: ")
         if load_path.strip() == "":
           load_path = self.rom_image_path
 
@@ -116,7 +165,7 @@ class Debugger:
           if self.machine.pc.value in self.breakpoints:
             for addr in self.breakpoints:
               if addr in self.dbg_addr_info and len(self.dbg_addr_info[addr].labels) > 0:
-                label_suffix = f" [{' '.join(self.dbg_addr_info[addr].labels)}]"
+                label_suffix = f" [{' '.join(self.dbg_addr_info[addr].labels)}] ({self.dbg_addr_info[addr].src_info})"
               else:
                 label_suffix = ""
 
@@ -128,25 +177,13 @@ class Debugger:
 
       elif cmd == "b":
         print("Set breakpoints:")
-        for addr in self.breakpoints:
-          if addr in self.dbg_addr_info and len(self.dbg_addr_info[addr].labels) > 0:
-            label_suffix = f" [{' '.join(self.dbg_addr_info[addr].labels)}]"
-          else:
-            label_suffix = ""
-          print(f"  0x{addr:>04x}{label_suffix}")
-        if len(self.breakpoints) == 0:
-          print("<no breakpoints>")
-        print()
+        self.print_breakpoints()
 
-        try:
-          env: dict[str, int] = {}
-          for addr in self.dbg_addr_info:
-            for label in self.dbg_addr_info[addr].labels:
-              env[label] = addr
-          addr = eval(input("Breakpoint address: "), env)
-        except:
+        addr = self.query_breakpoint()
+        if addr is None:
           print("Cancelled")
           continue
+
         if type(addr) != int or addr < 0 or addr >= 64 * 2 ** 16:
           print("Invalid address")
 
