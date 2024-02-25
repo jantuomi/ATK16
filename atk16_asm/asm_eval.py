@@ -1,13 +1,13 @@
 constants: dict[str, str] = {
   # Registers
-  "ra": "0",
-  "rb": "1",
-  "rc": "2",
-  "rd": "3",
-  "re": "4",
-  "rf": "5",
-  "rg": "6",
-  "rh": "7",
+  "RA": "0",
+  "RB": "1",
+  "RC": "2",
+  "RD": "3",
+  "RE": "4",
+  "RF": "5",
+  "RG": "6",
+  "RH": "7",
   # ALU instructions
   "al_plus": "0",
   "al_minus": "1",
@@ -40,7 +40,6 @@ def eval_symbol(symbols: Symbols, c: str) -> str:
   return c
 
 def eval_expr(symbols: Symbols, expr: str, bits: int = 16) -> int:
-  expr = expr.lower()
   expr = eval_symbol(symbols, expr)
   ret = eval(expr, symbols.copy()) # eval as Python expr
   check_size(bits, ret)

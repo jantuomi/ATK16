@@ -3,6 +3,7 @@ from typing import Literal
 from dataclasses import dataclass
 import sys
 from .opcodes import *
+from .colors import C
 
 class Register:
   def __init__(self, bits: int):
@@ -140,6 +141,55 @@ class Machine:
     )
 
     self.running = False
+
+  def make_copy(self):
+    new_machine = Machine()
+
+    new_machine.rom = ROM(self.rom.addr_bits, self.rom.data_bits)
+    new_machine.rom.memory = self.rom.memory.copy()
+
+    new_machine.ram = RAM(self.ram.addr_bits, self.ram.data_bits)
+    new_machine.ram.memory = self.ram.memory.copy()
+
+    new_machine.alu = self.alu
+
+    new_machine.ra = Register(self.ra.bits)
+    new_machine.ra.value = self.ra.value
+
+    new_machine.rb = Register(self.rb.bits)
+    new_machine.rb.value = self.rb.value
+
+    new_machine.rc = Register(self.rc.bits)
+    new_machine.rc.value = self.rc.value
+
+    new_machine.rd = Register(self.rd.bits)
+    new_machine.rd.value = self.rd.value
+
+    new_machine.re = Register(self.re.bits)
+    new_machine.re.value = self.re.value
+
+    new_machine.rf = Register(self.rf.bits)
+    new_machine.rf.value = self.rf.value
+
+    new_machine.rg = Register(self.rg.bits)
+    new_machine.rg.value = self.rg.value
+
+    new_machine.rh = Register(self.rh.bits)
+    new_machine.rh.value = self.rh.value
+
+    new_machine.pc = Counter(self.pc.bits)
+    new_machine.pc.value = self.pc.value
+
+    new_machine.fr = ALUFlags(
+      carry = self.fr.carry,
+      overflow = self.fr.overflow,
+      zero = self.fr.zero,
+      sign = self.fr.sign,
+    )
+
+    new_machine.running = self.running
+
+    return new_machine
 
   def mem_read(self, addr: int):
     if addr < 2 ** 15:
@@ -332,15 +382,25 @@ class Machine:
     raise ValueError(f"Invalid instruction: {instr:>016b} ({instr:>04x})")
 
   def print_state_summary(self):
+    pc_hex = C.OKBLUE + f"0x{self.pc.value:>04x}" + C.ENDC
+    print(f"PC:     {pc_hex} ({self.pc.value})")
+
     for i in range(8):
       reg_name = f"r{chr(ord('a') + i)}"
       value = getattr(self, reg_name).value
-      print(f"{reg_name.upper()}: 0x{value:>04x} ({value})")
+      reg_hex = C.OKBLUE + f"0x{value:>04x}" + C.ENDC
+      print(f"{reg_name.upper()}:     {reg_hex} ({value})")
 
-    print(f"PC: 0x{self.pc.value:>04x} ({self.pc.value})")
-    print(f"FR: carry={self.fr.carry}\n    "
-          f"overflow={self.fr.overflow}\n    "
-          f"zero={self.fr.zero}\n    "
-          f"sign={self.fr.sign}")
     for i in range(8):
-      print(f"RAM[{i}]: 0x{self.ram.read(i):>04x} ({self.ram.read(i)})")
+      ram_hex = C.OKBLUE + f"0x{self.ram.read(i):>04x}" + C.ENDC
+      print(f"RAM[{i}]: {ram_hex} ({self.ram.read(i)})")
+
+    def as_num(b: bool) -> str:
+      return ((C.OKGREEN + "1") if b else (C.WARNING + "0")) + C.ENDC
+
+    print(f"FR: C: {as_num(self.fr.carry)}, "
+          f"O: {as_num(self.fr.overflow)}, "
+          f"Z: {as_num(self.fr.zero)}, "
+          f"S: {as_num(self.fr.sign)}")
+
+    print()

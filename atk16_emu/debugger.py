@@ -1,6 +1,7 @@
 from getch import getche
 from .emu import Machine
 from dataclasses import dataclass
+from .colors import C
 
 @dataclass
 class DbgAddrInfo:
@@ -20,6 +21,8 @@ def try_parse_num(s: str) -> int | None:
     return None
 
 class Debugger:
+  HISTORY_MAX_LEN = 1000
+
   def __init__(self):
     self.rom_image = None
     self.breakpoints: set[int] = set()
@@ -27,6 +30,11 @@ class Debugger:
     self.machine.reset()
     self.machine.run()
     self.dbg_addr_info: dict[int, DbgAddrInfo] = {}
+
+    self.time_traveling_enabled = False
+    # Index complement, 0 is last element
+    self.history_cmpl_index = 0
+    self.history_buffer: list[Machine] = []
 
   def load_rom_image(self, rom_image_path: str) -> None:
     self.rom_image_path = rom_image_path
@@ -71,10 +79,10 @@ class Debugger:
         labels=labels,
       )
 
-    print(f"Loaded debug info for from \"{dbg_symbols_path}\".")
+    print(f"Loaded debug info from \"{dbg_symbols_path}\".")
 
   def query_breakpoint(self) -> int | None:
-    input_ = input("Breakpoint address: ")
+    input_ = input(C.UNDERLINE + "Breakpoint address:" + C.ENDC + " ")
     as_number = try_parse_num(input_)
     if input_ == "":
       return None
@@ -100,43 +108,65 @@ class Debugger:
   def print_breakpoints(self):
     for addr in self.breakpoints:
       if addr in self.dbg_addr_info and len(self.dbg_addr_info[addr].labels) > 0:
-        label_suffix = f" [{' '.join(self.dbg_addr_info[addr].labels)}] ({self.dbg_addr_info[addr].src_info})"
+        label_suffix = " "
+        label_suffix += C.OKCYAN + f"[{' '.join(self.dbg_addr_info[addr].labels)}] " + C.ENDC
+        label_suffix += f"({self.dbg_addr_info[addr].src_info})"
       else:
         label_suffix = ""
-      print(f"  0x{addr:>04x}{label_suffix}")
+
+      addr_prefix = C.OKGREEN + f"0x{addr:>04x}" + C.ENDC
+      print(f"  {addr_prefix}{label_suffix}")
 
     if len(self.breakpoints) == 0:
-        print("<no breakpoints>")
+        print("  <no breakpoints>")
 
     print()
 
   def print_pc_context(self):
-    print("=== Program context")
+    print(C.UNDERLINE + "Program context" + C.ENDC)
     for i in range(-4, 5):
       addr = self.machine.pc.value + i
       if addr < 0 or addr >= 64 * 2 ** 16:
         continue
 
+      addr_prefix = C.OKGREEN + f"0x{addr:>04x}" + C.ENDC
+      word_infix = C.OKBLUE + f"0x{self.machine.mem_read(addr):>04x}" + C.ENDC
       if i == 0:
-        print(f"> 0x{addr:>04x}: 0x{self.machine.mem_read(addr):>04x}", end="")
+        print(f"> {addr_prefix}: {word_infix}", end="")
       else:
-        print(f"  0x{addr:>04x}: 0x{self.machine.mem_read(addr):>04x}", end="")
+        print(f"  {addr_prefix}: {word_infix}", end="")
 
       if addr in self.dbg_addr_info:
         dbg_info = self.dbg_addr_info[addr]
-        labels: str = f"[{' '.join(dbg_info.labels)}] " if len(dbg_info.labels) > 0 else ""
-        print(f"  {dbg_info.text:<{self.dbg_text_col_width}} {dbg_info.original_text:<{self.dbg_original_text_col_width}} {labels}({dbg_info.src_info})")
+        labels: str = C.OKCYAN + f"[{' '.join(dbg_info.labels)}] " + C.ENDC if len(dbg_info.labels) > 0 else ""
+        dbg_text = f"{dbg_info.text:<{self.dbg_text_col_width}}"
+        dbg_orig = f"{dbg_info.original_text:<{self.dbg_original_text_col_width}}"
+        print(f"  {dbg_text} {dbg_orig} {labels}({dbg_info.src_info})")
       else:
         print()
 
     print()
 
+  def record_history(self):
+    self.history_buffer.append(self.machine.make_copy())
+    if len(self.history_buffer) > Debugger.HISTORY_MAX_LEN:
+      self.history_buffer.pop(0)
+
+  def reset(self):
+    self.machine.reset()
+    self.machine.run()
+    self.history_buffer = []
+    self.history_cmpl_index = 0
+
   def activate(self):
-    print("=== ATK16 debugger ===")
+    print(C.WARNING + "=== ATK16 debugger ===" + C.ENDC)
     print("Press ? to show command help. Press q to quit.")
     print()
 
     while True:
+      if self.history_cmpl_index > 0:
+        print(C.OKGREEN + f"Currently {self.history_cmpl_index} steps into history" + C.ENDC + "\n")
+
       self.print_pc_context()
       print("dbg> ", end="", flush=True)
       cmd = getche()
@@ -155,28 +185,55 @@ class Debugger:
 
         self.load_rom_image(load_path)
 
-        self.machine.reset()
-        self.machine.run()
+        self.reset()
         print("Machine reset.")
 
       elif cmd == "r":
+        if self.time_traveling_enabled:
+          if self.history_cmpl_index - 1 > 0:
+            self.history_cmpl_index -= 1
+            self.machine = self.history_buffer[len(self.history_buffer) - self.history_cmpl_index]
+            continue
+
+          if self.history_cmpl_index == 1:
+            self.history_cmpl_index = 0
+            self.history_buffer.pop()
+
         while self.machine.running:
+          if self.time_traveling_enabled:
+            self.record_history()
+
           self.machine.step()
+
           if self.machine.pc.value in self.breakpoints:
             for addr in self.breakpoints:
               if addr in self.dbg_addr_info and len(self.dbg_addr_info[addr].labels) > 0:
-                label_suffix = f" [{' '.join(self.dbg_addr_info[addr].labels)}] ({self.dbg_addr_info[addr].src_info})"
+                label_infix = C.OKCYAN + f"[{' '.join(self.dbg_addr_info[addr].labels)}]" + C.ENDC
+                label_suffix = f" {label_infix} ({self.dbg_addr_info[addr].src_info})"
               else:
                 label_suffix = ""
 
-            print(f"Breakpoint hit at 0x{self.machine.pc.value:>04x}{label_suffix}")
+            pc_hex = C.OKGREEN + f"0x{self.machine.pc.value:>04x}" + C.ENDC
+            print(C.WARNING + f"Breakpoint hit at " + C.ENDC + f"{pc_hex}{label_suffix}\n")
             break
 
         if not self.machine.running:
-          print("Machine halted.")
+          print(C.FAIL + "Machine halted." + C.ENDC)
 
       elif cmd == "b":
-        print("Set breakpoints:")
+        if not self.time_traveling_enabled:
+          print(C.WARNING + "Time traveling mode is not enabled." + C.ENDC + "\n")
+          continue
+
+        if self.history_cmpl_index == len(self.history_buffer):
+          print(C.WARNING + "No more history available" + C.ENDC + "\n")
+          continue
+
+        self.history_cmpl_index += 1
+        self.machine = self.history_buffer[len(self.history_buffer) - self.history_cmpl_index]
+
+      elif cmd == "B":
+        print(C.UNDERLINE + "Active breakpoints:" + C.ENDC)
         self.print_breakpoints()
 
         addr = self.query_breakpoint()
@@ -187,37 +244,65 @@ class Debugger:
         if type(addr) != int or addr < 0 or addr >= 64 * 2 ** 16:
           print("Invalid address")
 
+        addr_hex = C.OKGREEN + f"0x{addr:>04x}" + C.ENDC
         if addr in self.breakpoints:
           self.breakpoints.remove(addr)
-          print(f"Removed breakpoint at 0x{addr:>04x}")
+          print(C.WARNING + f"Removed breakpoint at {addr_hex}" + C.ENDC)
         else:
           self.breakpoints.add(addr)
+          print(C.WARNING + f"Set breakpoint at {addr_hex}" + C.ENDC)
+
+        print()
 
       elif cmd == "n":
+        if self.time_traveling_enabled:
+          if self.history_cmpl_index - 1 > 0:
+            self.history_cmpl_index -= 1
+            self.machine = self.history_buffer[len(self.history_buffer) - self.history_cmpl_index]
+            continue
+
+          if self.history_cmpl_index == 1:
+            self.history_cmpl_index = 0
+            self.history_buffer.pop()
+
         if not self.machine.running:
-          print("Machine halted.")
+          print(C.FAIL + "Machine halted." + C.ENDC)
           continue
+
+        if self.time_traveling_enabled:
+          self.record_history()
+
         self.machine.step()
+
         if not self.machine.running:
-          print("Machine halted.")
+          print(C.FAIL + "Machine halted." + C.ENDC)
 
       elif cmd == "s":
         self.machine.print_state_summary()
 
       elif cmd == "0":
-        self.machine.reset()
-        self.machine.run()
+        self.reset()
         print("Machine reset.")
+
+      elif cmd == "t":
+        self.time_traveling_enabled = not self.time_traveling_enabled
+
+        if not self.time_traveling_enabled:
+          self.history_buffer = []
+          self.history_cmpl_index = 0
+
+        print(C.WARNING + f"Time traveling mode: {'on' if self.time_traveling_enabled else 'off'}" + C.ENDC + "\n")
 
       else:
         print(f"Unknown command: {cmd}")
 
   def print_help(self):
     print("Debugger commands:")
+    print("  t     toggle time traveling mode (slow)")
     print("  r     run until next breakpoint or until halted")
     print("  n     step forward")
-    print("  b     step backward")
-    print("  b     set or remove breakpoint")
+    print("  b     step backward (if in time traveling mode)")
+    print("  B     set or remove breakpoint")
     print("  s     show state summary")
     print("  0     reset machine state")
     print("  l     load ROM image and reset machine state")
