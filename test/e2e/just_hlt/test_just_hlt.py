@@ -8,7 +8,7 @@ def test_just_hlt():
     source = f.read()
 
   obj = assemble(source, filename)
-  rom_image = pad_bytearray(obj)
+  rom_image = pad_bytearray(obj.program)
 
   machine = Machine()
   machine.load_rom_image(rom_image)

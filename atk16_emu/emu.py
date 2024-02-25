@@ -103,17 +103,54 @@ class ALU:
           sign = (result & 0x8000) != 0
         ))
       case 2: # L and R
-        raise NotImplementedError()
+        result = L & R
+        return ALUResult(result, ALUFlags(
+          carry = False,
+          overflow = False,
+          zero = result == 0,
+          sign = (result & 0x8000) != 0
+        ))
       case 3: # L or R
-        raise NotImplementedError()
+        result = L | R
+        return ALUResult(result, ALUFlags(
+          carry = False,
+          overflow = False,
+          zero = result == 0,
+          sign = (result & 0x8000) != 0
+        ))
       case 4: # L xor R
-        raise NotImplementedError()
+        result = L ^ R
+        return ALUResult(result, ALUFlags(
+          carry = False,
+          overflow = False,
+          zero = result == 0,
+          sign = (result & 0x8000) != 0
+        ))
       case 5: # L >> R logical
-        raise NotImplementedError()
+        result = L >> R
+        return ALUResult(result, ALUFlags(
+          carry = False,
+          overflow = False,
+          zero = result == 0,
+          sign = (result & 0x8000) != 0
+        ))
       case 6: # L >>> R arithmetic
-        raise NotImplementedError()
+        # shift right but keep the sign bit (16-bit)
+        result = (L >> R) | (L & 0x8000)
+        return ALUResult(result, ALUFlags(
+          carry = False,
+          overflow = False,
+          zero = result == 0,
+          sign = (result & 0x8000) != 0
+        ))
       case 7: # L << R
-        raise NotImplementedError()
+        result = (L << R) & 0xFFFF
+        return ALUResult(result, ALUFlags(
+          carry = False,
+          overflow = False,
+          zero = result == 0,
+          sign = (result & 0x8000) != 0
+        ))
 
     raise ValueError(f"Invalid ALU S: {S}")
 
@@ -200,7 +237,7 @@ class Machine:
 
   def mem_write(self, addr: int, value: int):
     if addr < 2 ** 15:
-      raise ValueError(f"Cannot write to ROM, addr: {addr:>04x}")
+      raise ValueError(f"Cannot write to ROM, addr: 0x{addr:>04x}")
     else:
       # TODO: Implement memory-mapped I/O
       self.ram.write(addr & 0x7FFF, value)
@@ -295,6 +332,7 @@ class Machine:
           addr = self.get_nth_register(addr_reg).value
           value = self.get_nth_register(from_reg).value
 
+          print(f"==== addr: 0x{addr:>04x}, value: 0x{value:>04x}")
           self.mem_write(addr, value)
 
         case LDI(to_reg, imm):

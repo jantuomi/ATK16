@@ -54,11 +54,11 @@ def make_ldr(meta: Meta, symbols: Symbols, addr_reg: str, to_reg: str) -> int:
 
 def make_str(meta: Meta, symbols: Symbols, from_reg: str, addr_reg: str) -> int:
   """STR 0011 XXXL LLRR RXXX"""
-  from_reg_e = eval_expr(symbols, from_reg, bits=3)
-  addr_reg_e = eval_expr(symbols, addr_reg, bits=3)
+  addr_reg_e = eval_expr(symbols, from_reg, bits=3)
+  from_reg_e = eval_expr(symbols, addr_reg, bits=3)
   word = (0b0011 << 12) + \
-              (addr_reg_e << 6) + \
-              (from_reg_e << 3)
+              (from_reg_e << 6) + \
+              (addr_reg_e << 3)
   return word
 
 def make_ldi(meta: Meta, symbols: Symbols, imm: str, to_reg: str) -> int:

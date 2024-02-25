@@ -1,4 +1,4 @@
-@let sp              RH
+@let SP              RH
 
 ; vector table fields
 @let vector_table    0x10
