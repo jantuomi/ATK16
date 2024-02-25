@@ -1,4 +1,6 @@
 from getch import getche
+import re
+from typing import Literal
 from .emu import Machine
 from dataclasses import dataclass
 from .colors import C
@@ -20,6 +22,10 @@ def try_parse_num(s: str) -> int | None:
   else:
     return None
 
+def without_colors(s: str):
+  ansi_escape = re.compile(r'\x1b\[([0-9A-Za-z]+)(;[0-9A-Za-z]+)*m')
+  return ansi_escape.sub('', s)
+
 class Debugger:
   HISTORY_MAX_LEN = 1000
 
@@ -35,6 +41,8 @@ class Debugger:
     # Index complement, 0 is last element
     self.history_cmpl_index = 0
     self.history_buffer: list[Machine] = []
+
+    self.inline_evaled_symbols_enabled: Literal["off", "dec", "hex"] = "off"
 
   def load_rom_image(self, rom_image_path: str) -> None:
     self.rom_image_path = rom_image_path
@@ -122,6 +130,21 @@ class Debugger:
 
     print()
 
+  def inline_eval_symbols(self, dbg_text: str, base: Literal["dec", "hex"]) -> str:
+    parts = dbg_text.split(" ")
+    regs = ["RA", "RB", "RC", "RD", "RE", "RF", "RG", "RH"]
+    result_parts = []
+    for part in parts:
+      if part in regs:
+        reg_value = self.machine.__getattribute__(part.lower()).value
+        reg_value = f"0x{reg_value:>04x}" if base == "hex" else str(reg_value)
+        with_value = f"{part} " + C.WARNING + f"[{reg_value}]" + C.ENDC
+        result_parts.append(with_value)
+      else:
+        result_parts.append(part)
+
+    return " ".join(result_parts)
+
   def print_pc_context(self):
     print(C.UNDERLINE + "Program context" + C.ENDC)
     for i in range(-4, 5):
@@ -138,9 +161,18 @@ class Debugger:
 
       if addr in self.dbg_addr_info:
         dbg_info = self.dbg_addr_info[addr]
-        labels: str = C.OKCYAN + f"[{' '.join(dbg_info.labels)}] " + C.ENDC if len(dbg_info.labels) > 0 else ""
-        dbg_text = f"{dbg_info.text:<{self.dbg_text_col_width}}"
+
+        if self.inline_evaled_symbols_enabled != "off" and i == 0:
+          dbg_text = self.inline_eval_symbols(dbg_info.text, base=self.inline_evaled_symbols_enabled)
+          dbg_text_len = len(without_colors(dbg_text))
+          if dbg_text_len < self.dbg_text_col_width:
+            dbg_text += " " * (self.dbg_text_col_width - dbg_text_len)
+        else:
+          dbg_text = f"{dbg_info.text:<{self.dbg_text_col_width}}"
+
         dbg_orig = f"{dbg_info.original_text:<{self.dbg_original_text_col_width}}"
+
+        labels: str = C.OKCYAN + f"[{' '.join(dbg_info.labels)}] " + C.ENDC if len(dbg_info.labels) > 0 else ""
         print(f"  {dbg_text} {dbg_orig} {labels}({dbg_info.src_info})")
       else:
         print()
@@ -184,9 +216,9 @@ class Debugger:
           load_path = self.rom_image_path
 
         self.load_rom_image(load_path)
-
         self.reset()
-        print("Machine reset.")
+
+        print(C.WARNING + "Machine reset.\n" + C.ENDC)
 
       elif cmd == "r":
         if self.time_traveling_enabled:
@@ -218,7 +250,7 @@ class Debugger:
             break
 
         if not self.machine.running:
-          print(C.FAIL + "Machine halted." + C.ENDC)
+          print(C.FAIL + "Machine halted.\n" + C.ENDC)
 
       elif cmd == "b":
         if not self.time_traveling_enabled:
@@ -266,7 +298,7 @@ class Debugger:
             self.history_buffer.pop()
 
         if not self.machine.running:
-          print(C.FAIL + "Machine halted." + C.ENDC)
+          print(C.FAIL + "Machine halted.\n" + C.ENDC)
           continue
 
         if self.time_traveling_enabled:
@@ -275,14 +307,14 @@ class Debugger:
         self.machine.step()
 
         if not self.machine.running:
-          print(C.FAIL + "Machine halted." + C.ENDC)
+          print(C.FAIL + "Machine halted.\n" + C.ENDC)
 
       elif cmd == "s":
         self.machine.print_state_summary()
 
       elif cmd == "0":
         self.reset()
-        print("Machine reset.")
+        print(C.WARNING + "Machine reset.\n" + C.ENDC)
 
       elif cmd == "t":
         self.time_traveling_enabled = not self.time_traveling_enabled
@@ -292,6 +324,16 @@ class Debugger:
           self.history_cmpl_index = 0
 
         print(C.WARNING + f"Time traveling mode: {'on' if self.time_traveling_enabled else 'off'}" + C.ENDC + "\n")
+
+      elif cmd == "e":
+        if self.inline_evaled_symbols_enabled == "off":
+          self.inline_evaled_symbols_enabled = "dec"
+        elif self.inline_evaled_symbols_enabled == "dec":
+          self.inline_evaled_symbols_enabled = "hex"
+        else:
+          self.inline_evaled_symbols_enabled = "off"
+
+        print(C.WARNING + f"Inline symbol eval: {self.inline_evaled_symbols_enabled}" + C.ENDC + "\n")
 
       else:
         print(f"Unknown command: {cmd}")
@@ -304,6 +346,7 @@ class Debugger:
     print("  b     step backward (if in time traveling mode)")
     print("  B     set or remove breakpoint")
     print("  s     show state summary")
+    print("  e     toggle inline symbol eval on current line")
     print("  0     reset machine state")
     print("  l     load ROM image and reset machine state")
     print("  q     quit")
