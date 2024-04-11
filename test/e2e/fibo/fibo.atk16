@@ -2,9 +2,13 @@
 ; will jump to label main
 @include bootstrap
 
+@label iters
+  51
+
 @label main
-  ldi 10 RA
-  calli fibo                   ; call fibo subroutine with parameter 10
+  ldi iters RA
+  ldr RA RA
+  calli fibo                  ; call fibo subroutine with parameter 1000
   hlt
 
 @label fibo                   ; fibo(n) subroutine

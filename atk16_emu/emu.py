@@ -177,6 +177,7 @@ class Machine:
       sign = False,
     )
 
+    self.steps_taken = 0
     self.running = False
 
   def make_copy(self):
@@ -265,6 +266,7 @@ class Machine:
   def reset(self):
     self.pc.reset()
     self.running = False
+    self.steps_taken = 0
 
   def run(self):
     "Set running = True."
@@ -289,6 +291,7 @@ class Machine:
     if not self.running:
       raise RuntimeError("Machine is not running")
 
+    self.steps_taken += 1
     pc_addr = self.pc.value
     self.pc.step()
 
