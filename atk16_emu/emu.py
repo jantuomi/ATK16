@@ -2,6 +2,7 @@ import random
 from typing import Literal
 from dataclasses import dataclass
 import sys
+import time
 from .opcodes import *
 from .colors import C
 
@@ -277,6 +278,11 @@ class Machine:
     self.running = True
     while self.running:
       self.step()
+
+      # TODO limit emulation speed to 393359.375 Hz ~= 2542 ns per instruction
+      #      this is in order to have similar speed as the actual machine
+      #      see: test_emulation_speed.py
+      # naive time.sleep is slow and not accurate enough
 
   def check_nth_flag(self, n: int) -> bool:
     match n:

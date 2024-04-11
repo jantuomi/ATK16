@@ -1,0 +1,16 @@
+; bootstrap code (must be called to setup mandatory data)
+; will jump to label main
+@include bootstrap
+
+@label iters
+  10000
+
+@label main
+  ldi iters RA
+  ldr RA RA
+@label loop
+  dec RA
+  bri zero done
+  jpi loop
+@label done
+  hlt

@@ -1,0 +1,78 @@
+@let SP              RH
+
+; vector table fields
+@let vector_table    0x10
+@let vt_ISR0         0x10 ; ISR0
+@let vt_ISR1         0x11 ; ISR1
+@let vt_ISR2         0x12 ; ISR2
+@let vt_ISR3         0x13 ; ISR3
+@let vt_stack_addr   0x14 ; Stack address
+@let vt_term_pp_addr 0x15 ; Terminal peripheral address
+@let vt_kb_pp_addr   0x16 ; Keyboard peripheral address
+@let vt_gr_mode_addr 0x17 ; Graphics mode setting address
+@let vt_sprite_mem   0x18 ; Sprite memory address
+@let vt_text_mem     0x19 ; Text memory buffer address
+
+; memory segments
+@let stack_segment   0x8000
+@let mmio_segment    0xE000
+@let terminal_addr   0xE000
+@let keyboard_addr   0xE001
+@let gr_mode_addr    0xE002
+@let sprite_mem      0xE800
+@let text_mem        0xF800 ; to 0xFFFF
+; note: sprite memory & text memory can use the same space
+; since they are never used at the same time
+
+; graphics mode settings
+@let gr_disabled_mode 0b00
+@let gr_text_mode     0b01
+@let gr_sprite_mode   0b10
+
+@address vector_table
+  keyboard_isr   ; 0x10
+  hlt_isr        ; 0x11
+  hlt_isr        ; 0x12
+  hlt_isr        ; 0x13
+  stack_segment  ; 0x14
+  terminal_addr  ; 0x15
+  keyboard_addr  ; 0x16
+  gr_mode_addr   ; 0x17
+  sprite_mem     ; 0x18
+  text_mem       ; 0x19
+
+@label hlt_isr
+  ldi 0x55 RE
+  hlt
+
+@label keyboard_isr
+  spu RA
+  spu RB
+  ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
+  ldr RA RA               ; RA := Keyboard peripheral address deref
+  ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
+  ldi vt_term_pp_addr RB  ; RB := Terminal peripheral address pointer
+  ldr RB RB               ; RB := Terminal peripheral address deref
+  str RA RB               ; terminal <- character code (ASCII?)
+  mov RA RE               ; RE := character code (for debugging)
+  spo RB
+  spo RA
+  rti
+@label program_segment
+
+; define short prelude that sets up vital instructions
+; NOTE: must be shorter than the vector table offset
+@address 0x0
+; set up stack pointer to point to beginning of stack segment
+  ldi vt_stack_addr RA
+  ldr RA SP
+  jpi program_segment
+
+@address program_segment
+; set graphics mode to disabled
+  ldi vt_gr_mode_addr RA
+  ldr RA RA
+  ldi gr_disabled_mode RB
+  str RB RA
+; jump to main (user defined)
+  jpi main

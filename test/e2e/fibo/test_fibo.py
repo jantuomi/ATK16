@@ -22,13 +22,6 @@ def test_fibo():
   elapsed = end - start
   print("Elapsed time:", elapsed, "ns")
   steps_taken = machine.steps_taken
-
-  # VGA frequency is 25.175 MHz
-  # Divided by 16, that's 1.5734375 MHz (main clock)
-  # Instructions take 3–5 cycles, the average instruction takes around 4 cycles
-  # 1.5734375 MHz / 4 = 393359.375 Hz
-  # That is the goal instruction frequency
-  # TODO limit emulation speed to 393359.375 Hz
   print("Instructions / second:", steps_taken / (elapsed / 1e9))
 
   assert machine.ra.value == 41443
