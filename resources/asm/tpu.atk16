@@ -1,4 +1,4 @@
-@include bootstrap
+@include %bootstrap
 
 @label main
   ldi vt_gr_mode_addr RA

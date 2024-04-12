@@ -29,7 +29,14 @@ def pass_0(lines: list[str], file_name: str) -> Result0:
     match keyword:
       case "@include":
         asm_file_name = args[0] if args[0].endswith(".atk16") else args[0] + ".atk16"
-        path = os.path.join(os.path.dirname(file_name), asm_file_name)
+        # if starts with %, use the path relative to this source file, not the current working directory
+        if asm_file_name.startswith("%"):
+          path = os.path.join(os.path.dirname(__file__), "builtin_asm", asm_file_name[1:])
+        # if absolute, use the absolute path
+        elif os.path.isabs(asm_file_name):
+          path = asm_file_name
+        else:
+          path = os.path.join(os.path.dirname(file_name), asm_file_name)
         with open(path, "r") as f:
           incl_lines = f.readlines()
 

@@ -1,6 +1,4 @@
-; bootstrap code (must be called to setup mandatory data)
-; will jump to label main
-@include ../bootstrap
+@include %bootstrap
 @include lib
 
 ; values replaced by test driver code
