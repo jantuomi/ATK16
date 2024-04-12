@@ -1,67 +1,13 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-import random
+
 import sys
 from dataclasses import dataclass
 
 from .opcodes import *
+from .memory import *
 from .colors import C
 from .peripherals import Graphics, DummyGraphics
-
-class Register:
-  def __init__(self, bits: int):
-    self.bits = bits
-    self.value = random.randint(0, 2 ** bits)
-
-  def set_value(self, value: int):
-    if value < 0 or value >= 2 ** self.bits:
-      raise ValueError(f"Value {value} is out of range for {self.bits}-bit register")
-
-    self.value = value
-
-class Counter:
-  def __init__(self, bits: int):
-    self.bits = bits
-    self.value = random.randint(0, 2 ** bits)
-
-  def step(self):
-    self.value = (self.value + 1) % (2 ** self.bits)
-
-  def reset(self):
-    self.value = 0
-
-class ROM:
-  def __init__(self, addr_bits: int, data_bits: int):
-    self.addr_bits = addr_bits
-    self.data_bits = data_bits
-    self.memory = [random.randint(0, 2 ** data_bits) for _ in range(2 ** addr_bits)]
-
-  def read(self, addr: int) -> int:
-    if addr < 0 or addr >= 2 ** self.addr_bits:
-      raise ValueError(f"Address {addr} is out of range for {self.addr_bits}-bit ROM")
-
-    return self.memory[addr]
-
-class RAM:
-  def __init__(self, addr_bits: int, data_bits: int):
-    self.addr_bits = addr_bits
-    self.data_bits = data_bits
-    self.memory = [random.randint(0, 2 ** data_bits) for _ in range(2 ** addr_bits)]
-
-  def read(self, addr: int) -> int:
-    if addr < 0 or addr >= 2 ** self.addr_bits:
-      raise ValueError(f"Address {addr} is out of range for {self.addr_bits}-bit RAM")
-
-    return self.memory[addr]
-
-  def write(self, addr: int, value: int):
-    if addr < 0 or addr >= 2 ** self.addr_bits:
-      raise ValueError(f"Address {addr} is out of range for {self.addr_bits}-bit RAM")
-
-    if value < 0 or value >= 2 ** self.data_bits:
-      raise ValueError(f"Value {value} is out of range for {self.data_bits}-bit RAM")
-
-    self.memory[addr] = value
 
 @dataclass
 class ALUFlags:
@@ -259,6 +205,8 @@ class Machine:
         self.graphics.activate_tpu()
       elif addr == 0xE002 and value == 0b10:
         self.graphics.activate_ppu()
+      elif 0xF800 < addr <= 0xFFFF:
+        self.graphics.write(addr, value)
       else:
         self.ram.write(addr & 0x7FFF, value)
 

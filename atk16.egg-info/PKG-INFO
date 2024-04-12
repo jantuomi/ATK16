@@ -1,4 +1,0 @@
-Metadata-Version: 2.1
-Name: atk16
-Version: 0.1
-Requires-Dist: getch>=1.0

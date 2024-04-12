@@ -1,3 +1,0 @@
-[console_scripts]
-atk16c = atk16_asm.assembler:main
-atk16emu = atk16_emu.cli:main

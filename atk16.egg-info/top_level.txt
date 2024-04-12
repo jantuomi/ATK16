@@ -1,3 +1,0 @@
-atk16_asm
-atk16_emu
-test
