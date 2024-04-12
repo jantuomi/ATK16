@@ -28,8 +28,6 @@ def assemble(source: str, file_name: str) -> AssemblyResult:
 
   nop = bytearray([0b1000_0000, 0])
   result = bytearray()
-  # initially one nop
-  result.extend(nop)
 
   for line in result4.lines:
     for (symbol, symbol_value) in result4.symbols.items():
@@ -52,33 +50,72 @@ def assemble(source: str, file_name: str) -> AssemblyResult:
     dbg_source_table=result4.dbg_source_table,
   )
 
-def main():
-  if len(sys.argv) != 3:
-    print("usage: assembler.py <infile> <outfile> # read from file")
-    print("       assembler.py - <outfile>        # read from stdin")
+def show_help():
+  print("usage: assembler.py [-h|--help] [-o outfile] <infile>")
+  print("")
+  print("Positional arguments:")
+  print("  <infile>     input file in .atk16 assembler text format (use - for stdin)")
+  print("")
+  print("Options:")
+  print("  -o outfile   output file in binary format")
+  print("  -h|--help    show this help")
+
+@dataclass
+class CliOptions:
+  infile: str
+  outfile: str
+
+def parse_cli_args(args: list[str]) -> CliOptions:
+  i = 1
+  infile: str | None = None
+  outfile: str | None = None
+  while i < len(args):
+    if args[i] == "-o":
+      if i + 1 >= len(args):
+        print("Missing argument for -o")
+        show_help()
+        sys.exit(1)
+      outfile = args[i + 1]
+      i += 2
+    elif args[i] == "-h" or args[i] == "--help":
+      show_help()
+      sys.exit(0)
+    elif not infile:
+      infile = args[i]
+      i += 1
+    else:
+      raise Exception(f"Unknown argument: {args[i]}")
+
+  if not infile or not outfile:
+    show_help()
     sys.exit(1)
 
-  infile_path = sys.argv[1]
-  outfile_path = sys.argv[2]
+  return CliOptions(
+    infile=infile,
+    outfile=outfile,
+  )
+
+def main():
+  options = parse_cli_args(sys.argv)
 
   src: str = ""
-  if (infile_path == "-"):
+  if (options.infile == "-"):
     for line in sys.stdin:
       src += line
   else:
-    with open(infile_path, "r") as f:
+    with open(options.infile, "r") as f:
       src = f.read()
 
-  result = assemble(src, infile_path)
+  result = assemble(src, options.infile)
 
-  with open(outfile_path, "wb") as f:
+  with open(options.outfile, "wb") as f:
     f.write(result.program)
 
-  pad_binary(outfile_path, 64 * 1024)
+  pad_binary(options.outfile, 64 * 1024)
 
-  print(f"Wrote 64 KB to {outfile_path} ({len(result.program)} B without padding)")
+  print(f"Wrote 64 KB to {options.outfile} ({len(result.program)} B without padding)")
 
-  dbg_outfile_path = outfile_path + ".dbg"
+  dbg_outfile_path = options.outfile + ".dbg"
 
   with open(dbg_outfile_path, "w") as f:
     for i in range(32 * 1024): # 32K words

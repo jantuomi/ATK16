@@ -1,8 +1,9 @@
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import random
-from typing import Literal
-from dataclasses import dataclass
 import sys
-import time
+from dataclasses import dataclass
+
 from .opcodes import *
 from .colors import C
 from .peripherals import Graphics, DummyGraphics
