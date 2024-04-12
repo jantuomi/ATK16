@@ -156,11 +156,12 @@ def expand_addi(left: str, imm: str, target: str) -> ExpandResult:
 def expand_subi(left: str, imm: str, target: str) -> ExpandResult:
   return [["ali", "al_minus", left, imm, target]]
 
-def expand_not(reg: str, target: str) -> ExpandResult:
-  return [["alr", "al_xor", reg, "0xFFFF", target]]
+# FIXME: 0xFFFF does not fit in 3 bits
+# def expand_not(reg: str, target: str) -> ExpandResult:
+#   return [["alr", "al_xor", reg, "0xFFFF", target]]
 
-def expand_noti(imm: str, target: str) -> ExpandResult:
-  return [["ali", "al_xor", imm, "0xFFFF", target]]
+# def expand_noti(imm: str, target: str) -> ExpandResult:
+#   return [["ali", "al_xor", imm, "0xFFFF", target]]
 
 def expand_and(left: str, right: str, target: str) -> ExpandResult:
   return [["alr", "al_and", left, right, target]]
@@ -293,8 +294,8 @@ expansions: OpExpansionDict = {
   "sub": expand_sub,
   "addi": expand_addi,
   "subi": expand_subi,
-  "not": expand_not,
-  "noti": expand_noti,
+  # "not": expand_not,
+  # "noti": expand_noti,
   "and": expand_and,
   "andi": expand_andi,
   "or": expand_or,

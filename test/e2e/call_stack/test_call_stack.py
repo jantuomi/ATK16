@@ -21,6 +21,12 @@ def run_mul(a: int, b: int) -> int:
 
   return machine.rg.value
 
+def test_mul_0():
+  expected = 0
+  received = run_mul(0, -100)
+
+  assert expected == received
+
 def test_mul_1():
   expected = 30
   received = run_mul(5, 6)
@@ -32,6 +38,8 @@ def test_mul_2():
   b = 200
   expected = a * b
   received = run_mul(a, b)
+  # interpret received as a 16 bit signed integer, using powers of two in the math
+  received = received if received < 2**15 else received - 2**16
 
   assert expected == received
 

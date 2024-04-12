@@ -1,12 +1,52 @@
+@label mul_sign_mask
+  ${2 ** 15}
+@label mul_not_mask
+  0xFFFF
+
 @label mul
-  ; multiply a signed/unsigned (a) and an unsigned number (b)
+  ; multiply a signed (a) and a signed (b)
   ; parameters RA = a
   ;            RB = b
   ; return     RG = a * b
 
-  stack_stash RA RB
-  ; initialize return value in RG to 0
-  ldi 0 RG
+  stack_stash RA RB RC RD
+  ldi 0 RG                ; initialize return value in RG to 0
+
+  ldi mul_sign_mask RD
+  ldr RD RD               ; RD := 2 ** 16
+  and RA RD RC            ; RC := 2 ** 16 if a is negative, 0 otherwise
+  and RB RD RD            ; RD := 2 ** 16 if b is negative, 0 otherwise
+  xor RC RD RC            ; RC := 2 ** 16 if exactly one of a or b is negative, 0 otherwise
+
+  ldi mul_not_mask RD
+  ldr RD RD               ; RD := 0xFFFF
+
+  ; RA := abs(a)
+  subi RA 0 RA
+  bri sign mul_a_negative
+  jpi mul_a_negative_done
+@label mul_a_negative
+  xor RA RD RA            ; RA := ~a
+  inc RA                  ; negate twos complement a
+@label mul_a_negative_done
+
+  ; RB := abs(b)
+  subi RB 0 RB
+  bri sign mul_b_negative
+  jpi mul_b_negative_done
+@label mul_b_negative
+  xor RB RD RB            ; RB := ~b
+  inc RB                  ; negate twos complement b
+@label mul_b_negative_done
+
+  ; the algorithms iterates b times, adding a to RG each time
+  ; so b should be as small as possible
+  sub RB RA RD            ; if a <= b, swap a and b
+  bri sign mul_loop
+
+  mov RA RD
+  mov RB RA
+  mov RD RB
 @label mul_loop
   ; if b == 0, we are done
   subi RB 0 RB
@@ -16,7 +56,17 @@
   dec RB
   jpi mul_loop
 @label mul_done
-  stack_restore RA RB
+  ; set the most significant bit to the precomputed sign
+  subi RC 0 RC
+  bri sign mul_negate_result
+  jpi mul_return
+@label mul_negate_result
+  ldi mul_not_mask RD
+  ldr RD RD               ; RD := 0xFFFF
+  xor RG RD RG
+  inc RG
+@label mul_return
+  stack_restore RA RB RC RD
   return
 
 ; Recursive impl of the factorial
