@@ -341,7 +341,6 @@ class Machine:
           addr = self.get_nth_register(addr_reg).value
           value = self.get_nth_register(from_reg).value
 
-          print(f"==== addr: 0x{addr:>04x}, value: 0x{value:>04x}")
           self.mem_write(addr, value)
 
         case LDI(to_reg, imm):

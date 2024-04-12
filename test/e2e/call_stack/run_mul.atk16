@@ -1,0 +1,18 @@
+; bootstrap code (must be called to setup mandatory data)
+; will jump to label main
+@include ../bootstrap
+@include lib
+
+; values replaced by test driver code
+@label INPUT_A
+  %INPUT_A%
+@label INPUT_B
+  %INPUT_B%
+
+@label main
+  ldi INPUT_A RA
+  ldr RA RA
+  ldi INPUT_B RB
+  ldr RB RB
+  calli mul
+  hlt

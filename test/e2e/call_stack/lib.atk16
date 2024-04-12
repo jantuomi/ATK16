@@ -1,0 +1,42 @@
+@label mul
+  ; multiply a signed/unsigned (a) and an unsigned number (b)
+  ; parameters RA = a
+  ;            RB = b
+  ; return     RG = a * b
+
+  stack_stash RA RB
+  ; initialize return value in RG to 0
+  ldi 0 RG
+@label mul_loop
+  ; if b == 0, we are done
+  subi RB 0 RB
+  bri zero mul_done
+  ; RG += RA
+  add RA RG RG
+  dec RB
+  jpi mul_loop
+@label mul_done
+  stack_restore RA RB
+  return
+
+; Recursive impl of the factorial
+; Calling convention is that arguments are in registers RA..RG (max 7 arguments since RH = SP)
+; and the return value is in RG (note: overwriting arg in RG)
+
+@label fact
+  ; parameters RA = n
+  ; return     RG = factorial(n)
+  subi RA 0 RA
+  bri zero fact_basecase
+@label fact_reccase
+  stack_stash RA RB
+  mov RA RB             ; RB := n
+  subi RA 1 RA          ; RA := n - 1
+  calli fact            ; RG := fact(n - 1)
+  mov RG RA             ; RA := fact(n - 1)
+  calli mul             ; RG := n * fact(n - 1)
+  stack_restore RA RB
+  return
+@label fact_basecase
+  ldi 1 RG
+  return

@@ -227,7 +227,9 @@ def expand_callr(addr_reg: str) -> ExpandResult:
     ["lpc", "RG"],
     *expand_addi("RG", "4", "RG"),
     *expand_spu("RG"),
-    ["jpr", addr_reg]
+    ["jpr", addr_reg],
+    ["ldr", "SP", "RG"],
+    *expand_dec("SP"),
   ]
 
 def expand_calli(addr_imm: str) -> ExpandResult:
@@ -236,11 +238,19 @@ def expand_calli(addr_imm: str) -> ExpandResult:
     ["ldi", ret_label, "RG"],
     *expand_spu("RG"),
     ["jpi", addr_imm],
-    ["@label", ret_label]
+    ["@label", ret_label],
+    ["ldr", "SP", "RG"], # return leaves SP pointing at return value, read to reg
+    *expand_dec("SP"),   # decrement SP to fix stack
   ]
 
 def expand_return() -> ExpandResult:
-  return expand_spo("RG") + [["jpr", "RG"]]
+  return [
+    ["str", "RG", "SP"], # store returned value on stack but don't increment SP
+    *expand_dec("SP"),   # decrement SP to access the return address
+    ["ldr", "SP", "RG"], # load return address to RG
+    *expand_inc("SP"),   # point SP to return value
+    ["jpr", "RG"]        # jump back to call site
+  ]
 
 def stack_stash(*rs: str) -> ExpandResult:
   result: ExpandResult = []
