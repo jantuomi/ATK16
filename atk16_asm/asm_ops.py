@@ -181,6 +181,16 @@ def expand_xor(left: str, imm: str, target: str) -> ExpandResult:
 def expand_xori(left: str, right: str, target: str) -> ExpandResult:
   return [["ali", "al_xor", left, right, target]]
 
+def expand_not(reg: str) -> ExpandResult:
+  tmp = "RA"
+  return [
+    *expand_spu(tmp),
+    ["ldi", "0", tmp],
+    *expand_subi(tmp, "1", tmp),
+    *expand_xor(reg, tmp, reg),
+    *expand_spo(tmp),
+  ]
+
 def expand_sll(left: str, right: str, target: str) -> ExpandResult:
   return [["alr", "al_sll", left, right, target]]
 
@@ -294,8 +304,7 @@ expansions: OpExpansionDict = {
   "sub": expand_sub,
   "addi": expand_addi,
   "subi": expand_subi,
-  # "not": expand_not,
-  # "noti": expand_noti,
+  "not": expand_not,
   "and": expand_and,
   "andi": expand_andi,
   "or": expand_or,
