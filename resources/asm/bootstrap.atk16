@@ -1,3 +1,5 @@
+@let SP              RH
+
 ; vector table fields
 @let vector_table    0x10
 @let vt_ISR0         0x10 ; ISR0
@@ -44,7 +46,8 @@
   hlt
 
 @label keyboard_isr
-  stack_stash RA RB
+  spu RA
+  spu RB
   ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
   ldr RA RA               ; RA := Keyboard peripheral address deref
   ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
@@ -52,7 +55,8 @@
   ldr RB RB               ; RB := Terminal peripheral address deref
   str RA RB               ; terminal <- character code (ASCII?)
   mov RA RE               ; RE := character code (for debugging)
-  stack_restore RA RB
+  spo RB
+  spo RA
   rti
 @label program_segment
 
@@ -66,6 +70,9 @@
 
 @address program_segment
 ; set graphics mode to disabled
-  set_graphics_mode gr_disabled_mode
+  ldi vt_gr_mode_addr RA
+  ldr RA RA
+  ldi gr_disabled_mode RB
+  str RB RA
 ; jump to main (user defined)
   jpi main

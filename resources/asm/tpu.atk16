@@ -1,0 +1,12 @@
+@include bootstrap
+
+@label main
+  ldi vt_gr_mode_addr RA
+  ldr RA RA
+  ldi gr_text_mode RB
+  str RB RA
+
+@label loop
+  jpi loop
+
+  hlt

@@ -29,10 +29,10 @@ def without_colors(s: str):
 class Debugger:
   HISTORY_MAX_LEN = 1000
 
-  def __init__(self):
+  def __init__(self, peripherals_enabled: bool):
     self.rom_image = None
     self.breakpoints: set[int] = set()
-    self.machine = Machine()
+    self.machine = Machine(peripherals_enabled)
     self.machine.reset()
     self.machine.run()
     self.dbg_addr_info: dict[int, DbgAddrInfo] = {}

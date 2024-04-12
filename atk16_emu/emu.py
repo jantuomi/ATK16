@@ -5,6 +5,7 @@ import sys
 import time
 from .opcodes import *
 from .colors import C
+from .peripherals import Graphics, DummyGraphics
 
 class Register:
   def __init__(self, bits: int):
@@ -156,7 +157,7 @@ class ALU:
     raise ValueError(f"Invalid ALU S: {S}")
 
 class Machine:
-  def __init__(self):
+  def __init__(self, peripherals_enabled: bool = False):
     self.rom = ROM(15, 16)
     self.ram = RAM(15, 16)
     self.alu = ALU()
@@ -181,8 +182,17 @@ class Machine:
     self.steps_taken = 0
     self.running = False
 
+    self.peripherals_enabled = peripherals_enabled
+    if peripherals_enabled:
+      self.graphics = Graphics()
+    else:
+      self.graphics = DummyGraphics()
+
   def make_copy(self):
     new_machine = Machine()
+
+    new_machine.peripherals_enabled = self.peripherals_enabled
+    new_machine.graphics = self.graphics
 
     new_machine.rom = ROM(self.rom.addr_bits, self.rom.data_bits)
     new_machine.rom.memory = self.rom.memory.copy()
@@ -242,7 +252,14 @@ class Machine:
       raise ValueError(f"Cannot write to ROM, addr: 0x{addr:>04x}")
     else:
       # TODO: Implement memory-mapped I/O
-      self.ram.write(addr & 0x7FFF, value)
+      if addr == 0xE002 and value == 0b00:
+        self.graphics.deactivate()
+      elif addr == 0xE002 and value == 0b01:
+        self.graphics.activate_tpu()
+      elif addr == 0xE002 and value == 0b10:
+        self.graphics.activate_ppu()
+      else:
+        self.ram.write(addr & 0x7FFF, value)
 
   def get_nth_register(self, n: int) -> Register:
     if n < 0 or n >= 8:
@@ -392,6 +409,8 @@ class Machine:
     except:
       print(f"Error while executing instruction 0b{instr:>016b} (0x{instr:>04x}) at address 0x{pc_addr:>04x}", file=sys.stderr)
       raise
+
+    self.graphics.step()
 
   def decode(self, instr: int):
     opcode = (instr & 0xF000) >> 12
