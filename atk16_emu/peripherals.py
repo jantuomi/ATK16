@@ -2,21 +2,26 @@ import pygame
 import sys
 import random
 from .memory import RAM, ROM
+from typing import Callable
+
+IRQ_LINE_KEYBOARD = 0
 
 class Peripherals:
-  def __init__(self):
+  def __init__(self, set_irq_line: Callable[[int], None]):
     pygame.init()
     self.graphics = Graphics()
     self.keyboard = Keyboard()
     self.terminal = Terminal()
+
+    self.set_irq_line = set_irq_line
 
   def step(self):
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
           sys.exit(0)
       elif event.type == pygame.KEYDOWN:
-        print(f"key pressed: {event.key}")
-        self.keyboard.latest_pressed = event.key
+        self.keyboard.set_latest_pressed(event.key)
+        self.set_irq_line(IRQ_LINE_KEYBOARD)
 
     self.graphics.step()
 
@@ -62,7 +67,7 @@ class TPU:
 
   def write_char(self, addr: int, char: int):
     # address: 5 bits y, 6 bits x
-    self.text_mem.write(addr, char)
+    self.text_mem.write(addr, char & 0xFF)
 
 class Graphics:
   def __init__(self):
@@ -70,9 +75,13 @@ class Graphics:
 
     surface_scale = 4
     self.screen = pygame.display.set_mode((320 * surface_scale, 240 * surface_scale))
+    pygame.display.set_caption("ATK16 Emulator")
     self.clock = pygame.time.Clock()
     self.tpu = TPU()
     self.active_picture_unit: TPU | None = None
+
+    self.step_counter = 0
+    self.draw_frame_every_n_steps = 500 # arbitrary, perf related
 
   def activate_tpu(self):
     self.active_picture_unit = self.tpu
@@ -84,12 +93,16 @@ class Graphics:
     self.active_picture_unit = None
 
   def step(self):
-    if self.active_picture_unit:
+    if self.active_picture_unit and self.step_counter >= self.draw_frame_every_n_steps:
       self.active_picture_unit.frame()
 
       self.screen.blit(pygame.transform.scale(self.tpu.surface, self.screen.get_size()), (0, 0))
       pygame.display.flip()
       self.clock.tick(60)
+
+      self.step_counter = 0
+    else:
+      self.step_counter += 1
 
   def write(self, addr: int, char: int):
     # take only the lower 11 bits
@@ -118,6 +131,13 @@ class Keyboard:
   def __init__(self):
     # mimic electronic behaviour my assigning a random value at start
     self.latest_pressed: int = random.randrange(0, 2 ** 16)
+
+  def set_latest_pressed(self, i: int):
+    if i < 0 or i > 0xFFFF:
+      # sometimes the keycodes are out of range, don't know why
+      return
+
+    self.latest_pressed = i
 
   def read(self) -> int:
     return self.latest_pressed

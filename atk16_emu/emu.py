@@ -119,6 +119,7 @@ class Machine:
     self.rh = Register(16)
 
     self.pc = Counter(16)
+    self.ipc = Register(16)
     self.fr = ALUFlags(
       carry = False,
       overflow = False,
@@ -128,10 +129,11 @@ class Machine:
 
     self.steps_taken = 0
     self.running = False
+    self.is_in_irq = False
 
     self.peripherals_enabled = peripherals_enabled
     if peripherals_enabled:
-      self.peripherals = Peripherals()
+      self.peripherals = Peripherals(set_irq_line=self.set_irq_line)
     else:
       self.peripherals = DummyPeripherals()
 
@@ -175,6 +177,9 @@ class Machine:
 
     new_machine.pc = Counter(self.pc.bits)
     new_machine.pc.value = self.pc.value
+
+    new_machine.ipc = Register(self.ipc.bits)
+    new_machine.ipc.value = self.ipc.value
 
     new_machine.fr = ALUFlags(
       carry = self.fr.carry,
@@ -262,6 +267,14 @@ class Machine:
 
     raise ValueError(f"Invalid flag number: {n}")
 
+  def set_irq_line(self, line: int):
+    if not self.is_in_irq:
+      self.ipc.value = self.pc.value
+      isr_addr_pointer = 0x10 + line # see bootstrap.atk16 vector table
+      isr_addr = self.mem_read(isr_addr_pointer)
+      self.pc.value = isr_addr
+      self.is_in_irq = True
+
   def step(self):
     if not self.running:
       raise RuntimeError("Machine is not running")
@@ -345,6 +358,7 @@ class Machine:
 
         case ISRP0():
           # interrupt service routine, read store PC in IPC register, set PC to ISRA value
+
           raise NotImplementedError()
 
         case ISRP1():
@@ -353,7 +367,8 @@ class Machine:
 
         case RTI():
           # return from interrupt routine, read PC from IPC register
-          raise NotImplementedError()
+          self.pc.value = self.ipc.value
+          self.is_in_irq = False
 
         case HLT():
           self.running = False
