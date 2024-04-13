@@ -136,8 +136,6 @@ class Keyboard:
     self.set_irq_line = set_irq_line
 
   def set_key_down(self, i: int):
-    print("key:", i)
-
     if i == pygame.K_LSHIFT or i == pygame.K_RSHIFT:
       self.shift_pressed = True
       return
