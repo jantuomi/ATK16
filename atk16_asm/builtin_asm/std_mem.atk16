@@ -18,3 +18,26 @@
 @label memset_done
   stack_restore RD RE
   return
+
+@label memcopy
+  ; copies a specified number of words from one location in memory to another
+  ; parameters:             RA = src (source address)
+  ;                         RB = dest (destination address)
+  ;                         RC = n (number of words to copy)
+  ; returns:                void
+  stack_stash RD RE RF
+  ldi 0 RD                  ; RD := i (counter), initially 0
+@label memcopy_loop
+  sub RC RD RE              ; RE := n – i (unused value)
+  bri zero memcopy_done     ; exit the loop
+
+  add RA RD RE              ; RE := src + i (address of the word to copy)
+  ldr RE RE                 ; RE := the word at address RE
+  add RB RD RF              ; RF := dest + i (address of the word to copy to)
+  str RE RF                 ; set the word at address RF to the word in RE
+
+  inc RD                    ; i := i + 1
+  jpi memcopy_loop          ; repeat the loop
+@label memcopy_done
+  stack_restore RD RE RF
+  return
