@@ -1,11 +1,6 @@
-@opt stack_pointer RG
-@opt csr_scratch RH
-@use ext_std:*
 @use ext_string_io:*
 
-; bootstrap code (must be called to set up mandatory data)
-; will jump to label main
-@include bootstrap
+@include %bootstrap
 
 @label main
   cursor_to_line RC 1
@@ -21,7 +16,7 @@
 @label loop
   jpi loop
 
-@label keyboard_isr
+@label my_keyboard_isr
   stack_stash RA RB RD
   ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
   ldr RA RA               ; RA := Keyboard peripheral address deref
@@ -56,3 +51,8 @@
 @label keyboard_isr_end
   stack_restore RA RB RD
   rti
+
+@address vt_ISR0
+@begin_override
+  my_keyboard_isr
+@end_override

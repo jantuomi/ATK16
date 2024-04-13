@@ -1,18 +1,5 @@
 @let SP              RH
 
-; vector table fields
-@let vector_table    0x10
-@let vt_ISR0         0x10 ; ISR0
-@let vt_ISR1         0x11 ; ISR1
-@let vt_ISR2         0x12 ; ISR2
-@let vt_ISR3         0x13 ; ISR3
-@let vt_stack_addr   0x14 ; Stack address
-@let vt_term_pp_addr 0x15 ; Terminal peripheral address
-@let vt_kb_pp_addr   0x16 ; Keyboard peripheral address
-@let vt_gr_mode_addr 0x17 ; Graphics mode setting address
-@let vt_sprite_mem   0x18 ; Sprite memory address
-@let vt_text_mem     0x19 ; Text memory buffer address
-
 ; memory segments
 @let stack_segment   0x8000
 @let mmio_segment    0xE000
@@ -29,8 +16,21 @@
 @let gr_text_mode     0b01
 @let gr_sprite_mode   0b10
 
+; vector table fields
+@let vector_table    0x10
+@let vt_ISR0         0x10 ; ISR0
+@let vt_ISR1         0x11 ; ISR1
+@let vt_ISR2         0x12 ; ISR2
+@let vt_ISR3         0x13 ; ISR3
+@let vt_stack_addr   0x14 ; Stack address
+@let vt_term_pp_addr 0x15 ; Terminal peripheral address
+@let vt_kb_pp_addr   0x16 ; Keyboard peripheral address
+@let vt_gr_mode_addr 0x17 ; Graphics mode setting address
+@let vt_sprite_mem   0x18 ; Sprite memory address
+@let vt_text_mem     0x19 ; Text memory buffer address
+
 @address vector_table
-  keyboard_isr   ; 0x10
+  hlt_isr        ; 0x10
   hlt_isr        ; 0x11
   hlt_isr        ; 0x12
   hlt_isr        ; 0x13
@@ -45,19 +45,21 @@
   ldi 0x55 RE
   hlt
 
-@label keyboard_isr
-  spu RA
-  spu RB
-  ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
-  ldr RA RA               ; RA := Keyboard peripheral address deref
-  ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
-  ldi vt_term_pp_addr RB  ; RB := Terminal peripheral address pointer
-  ldr RB RB               ; RB := Terminal peripheral address deref
-  str RA RB               ; terminal <- character code (ASCII?)
-  mov RA RE               ; RE := character code (for debugging)
-  spo RB
-  spo RA
-  rti
+; Example ISR for keyboard to terminal
+; @label keyboard_to_terminal_isr
+;   spu RA
+;   spu RB
+;   ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
+;   ldr RA RA               ; RA := Keyboard peripheral address deref
+;   ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
+;   ldi vt_term_pp_addr RB  ; RB := Terminal peripheral address pointer
+;   ldr RB RB               ; RB := Terminal peripheral address deref
+;   str RA RB               ; terminal <- character code (ASCII?)
+;   mov RA RE               ; RE := character code (for debugging)
+;   spo RB
+;   spo RA
+;   rti
+
 @label program_segment
 
 ; define short prelude that sets up vital instructions

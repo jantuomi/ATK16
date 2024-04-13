@@ -50,11 +50,21 @@ def pass_3(result2: Result2) -> Result3:
       original_text=original_text,
     )
 
+  # On address conflict, if override_mode is True, the last definition wins
+  # otherwise, an exception is raised
+  override_mode = False
+
   for line in result2.lines:
     keyword, *args = line.parts
     match keyword:
       case "@address":
         address = eval_expr(symbols, args[0])
+        continue
+      case "@begin_override":
+        override_mode = True
+        continue
+      case "@end_override":
+        override_mode = False
         continue
       case "@label":
         label = args[0]
@@ -67,6 +77,10 @@ def pass_3(result2: Result2) -> Result3:
         symbols[args[0]] = eval_expr(symbols, args[1])
         continue
       case _:
+        if override_mode:
+          # TODO this is a bit inefficient, but works
+          result_lines = list(filter(lambda l: l.address != address, result_lines))
+
         dbg_original_text = " ".join(line.original_parts)
         dbg_expanded_text = " ".join(line.parts)
         save_dbg_source(address, line.src_file, line.line_num, dbg_expanded_text, dbg_original_text)
