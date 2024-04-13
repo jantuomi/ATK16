@@ -1,0 +1,19 @@
+@label memset
+  ; sets a specified number of words in memory to a specified value
+  ; parameters:             RA = offset (offset in memory to start at)
+  ;                         RB = n (number of words to set)
+  ;                         RC = val (value to set the words to)
+  ; returns:                void
+  stack_stash RD RE
+  ldi 0 RD                  ; RD := i (counter), initially 0
+@label memset_loop
+  subi RB RD RE             ; RE := n – i (unused value)
+  bri zero memset_done      ; exit the loop
+
+  add RA RD RE              ; RE := RA + i (address of the word to set)
+  str RC RE                 ; set the word at address RE to value in RC
+
+  inc RD                    ; i := i + 1
+@label memset_done
+  stack_restore RD RE
+  return

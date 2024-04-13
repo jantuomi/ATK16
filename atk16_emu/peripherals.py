@@ -1,6 +1,31 @@
 import pygame
 import sys
+import random
 from .memory import RAM, ROM
+
+class Peripherals:
+  def __init__(self):
+    pygame.init()
+    self.graphics = Graphics()
+    self.keyboard = Keyboard()
+
+  def step(self):
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+          sys.exit(0)
+      elif event.type == pygame.KEYDOWN:
+        print(f"key pressed: {event.key}")
+        self.keyboard.latest_pressed = event.key
+
+    self.graphics.step()
+
+class DummyPeripherals:
+  def __init__(self):
+    self.graphics = DummyGraphics()
+    self.keyboard = DummyKeyboard()
+
+  def step(self):
+    pass
 
 class TPU:
   def __init__(self):
@@ -29,7 +54,6 @@ class TPU:
           for cx in range(2 ** 3):
             sx = (tx << 3) + cx
             sy = (ty << 3) + cy
-            #print("cy", cy, "ty", ty, "cx", cx, "tx", tx, "text_addr", text_addr, "char_s", char_s, "char_addr", char_addr)
             pixel_value_bit = (char_d >> cx) & 1
 
             self.surface.set_at((sx, sy), (255 * pixel_value_bit, 255 * pixel_value_bit, 255))
@@ -40,7 +64,6 @@ class TPU:
 
 class Graphics:
   def __init__(self):
-    pygame.init()
     pygame.display.init()
 
     surface_scale = 4
@@ -60,10 +83,6 @@ class Graphics:
 
   def step(self):
     if self.active_picture_unit:
-      for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            sys.exit(0)
-
       self.active_picture_unit.frame()
 
       self.screen.blit(pygame.transform.scale(self.tpu.surface, self.screen.get_size()), (0, 0))
@@ -89,3 +108,22 @@ class DummyGraphics:
 
   def step(self):
     pass
+
+  def write(self, addr: int, char: int):
+    pass
+
+class Keyboard:
+  def __init__(self):
+    # mimic electronic behaviour my assigning a random value at start
+    self.latest_pressed: int = random.randrange(0, 2 ** 16)
+
+  def read(self) -> int:
+    return self.latest_pressed
+
+class DummyKeyboard:
+  def __init__(self):
+    pass
+
+  def read(self) -> int:
+    print("warning: reading from dummy keyboard")
+    return 0xFFFF

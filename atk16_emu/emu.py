@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from .opcodes import *
 from .memory import *
 from .colors import C
-from .peripherals import Graphics, DummyGraphics
+from .peripherals import *
 
 @dataclass
 class ALUFlags:
@@ -131,15 +131,15 @@ class Machine:
 
     self.peripherals_enabled = peripherals_enabled
     if peripherals_enabled:
-      self.graphics = Graphics()
+      self.peripherals = Peripherals()
     else:
-      self.graphics = DummyGraphics()
+      self.peripherals = DummyPeripherals()
 
   def make_copy(self):
     new_machine = Machine()
 
     new_machine.peripherals_enabled = self.peripherals_enabled
-    new_machine.graphics = self.graphics
+    new_machine.peripherals = self.peripherals
 
     new_machine.rom = ROM(self.rom.addr_bits, self.rom.data_bits)
     new_machine.rom.memory = self.rom.memory.copy()
@@ -191,8 +191,10 @@ class Machine:
     if addr < 2 ** 15:
       return self.rom.read(addr & 0x7FFF)
     else:
-      # TODO: Implement memory-mapped I/O
-      return self.ram.read(addr & 0x7FFF)
+      if addr == 0xE001:
+        return self.peripherals.keyboard.read()
+      else:
+        return self.ram.read(addr & 0x7FFF)
 
   def mem_write(self, addr: int, value: int):
     if addr < 2 ** 15:
@@ -200,13 +202,15 @@ class Machine:
     else:
       # TODO: Implement memory-mapped I/O
       if addr == 0xE002 and value == 0b00:
-        self.graphics.deactivate()
+        self.peripherals.graphics.deactivate()
       elif addr == 0xE002 and value == 0b01:
-        self.graphics.activate_tpu()
+        self.peripherals.graphics.activate_tpu()
       elif addr == 0xE002 and value == 0b10:
-        self.graphics.activate_ppu()
+        self.peripherals.graphics.activate_ppu()
       elif 0xF800 < addr <= 0xFFFF:
-        self.graphics.write(addr, value)
+        self.peripherals.graphics.write(addr, value)
+      elif addr == 0xE000:
+        self.terminal.write(value)
       else:
         self.ram.write(addr & 0x7FFF, value)
 
@@ -359,7 +363,7 @@ class Machine:
       print(f"Error while executing instruction 0b{instr:>016b} (0x{instr:>04x}) at address 0x{pc_addr:>04x}", file=sys.stderr)
       raise
 
-    self.graphics.step()
+    self.peripherals.step()
 
   def decode(self, instr: int):
     opcode = (instr & 0xF000) >> 12
