@@ -10,7 +10,7 @@ class Peripherals:
   def __init__(self, set_irq_line: Callable[[int], None]):
     pygame.init()
     self.graphics = Graphics()
-    self.keyboard = Keyboard()
+    self.keyboard = Keyboard(set_irq_line=set_irq_line)
     self.terminal = Terminal()
 
     self.set_irq_line = set_irq_line
@@ -20,8 +20,9 @@ class Peripherals:
       if event.type == pygame.QUIT:
           sys.exit(0)
       elif event.type == pygame.KEYDOWN:
-        self.keyboard.set_latest_pressed(event.key)
-        self.set_irq_line(IRQ_LINE_KEYBOARD)
+        self.keyboard.set_key_down(event.key)
+      elif event.type == pygame.KEYUP:
+        self.keyboard.set_key_up(event.key)
 
     self.graphics.step()
 
@@ -128,16 +129,35 @@ class DummyGraphics:
     pass
 
 class Keyboard:
-  def __init__(self):
+  def __init__(self, set_irq_line: Callable[[int], None]):
     # mimic electronic behaviour my assigning a random value at start
     self.latest_pressed: int = random.randrange(0, 2 ** 16)
+    self.shift_pressed = False
+    self.set_irq_line = set_irq_line
 
-  def set_latest_pressed(self, i: int):
-    if i < 0 or i > 0xFFFF:
-      # sometimes the keycodes are out of range, don't know why
+  def set_key_down(self, i: int):
+    print("key:", i)
+
+    if i == pygame.K_LSHIFT or i == pygame.K_RSHIFT:
+      self.shift_pressed = True
       return
 
-    self.latest_pressed = i
+    if i == pygame.K_RETURN:
+      self.latest_pressed = 10
+
+    elif 0 <= i <= 0xFFFF:
+      # sometimes the keycodes are out of range, don't know why
+      if self.shift_pressed:
+        self.latest_pressed = i - 32 # FIXME this only works for uppercase letters
+                                     # for e.g. shift + 1 should be "!" but it's something else
+      else:
+        self.latest_pressed = i
+
+    self.set_irq_line(IRQ_LINE_KEYBOARD)
+
+  def set_key_up(self, i: int):
+    if i == pygame.K_LSHIFT or i == pygame.K_RSHIFT:
+      self.shift_pressed = False
 
   def read(self) -> int:
     return self.latest_pressed
