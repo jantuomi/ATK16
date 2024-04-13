@@ -1,0 +1,21 @@
+@include %bootstrap
+@include %std_mem
+
+@label mem_offset
+  0x9000
+
+@label main
+  ; set 0x9005 to value 4
+  ldi mem_offset RA
+  ldr RA RA
+  addi RA 5 RA
+  ldi 4 RB
+  str RB RA
+
+  ; set values 0x0000..0x0004 to 3
+  ldi mem_offset RA
+  ldr RA RA
+  ldi 5 RB
+  ldi 3 RC
+  calli memset
+  hlt

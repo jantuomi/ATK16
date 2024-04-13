@@ -200,17 +200,16 @@ class Machine:
     if addr < 2 ** 15:
       raise ValueError(f"Cannot write to ROM, addr: 0x{addr:>04x}")
     else:
-      # TODO: Implement memory-mapped I/O
       if addr == 0xE002 and value == 0b00:
         self.peripherals.graphics.deactivate()
       elif addr == 0xE002 and value == 0b01:
         self.peripherals.graphics.activate_tpu()
       elif addr == 0xE002 and value == 0b10:
         self.peripherals.graphics.activate_ppu()
-      elif 0xF800 < addr <= 0xFFFF:
+      elif 0xF800 <= addr <= 0xFFFF:
         self.peripherals.graphics.write(addr, value)
       elif addr == 0xE000:
-        self.terminal.write(value)
+        self.peripherals.terminal.write(value)
       else:
         self.ram.write(addr & 0x7FFF, value)
 

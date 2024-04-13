@@ -7,13 +7,14 @@
   stack_stash RD RE
   ldi 0 RD                  ; RD := i (counter), initially 0
 @label memset_loop
-  subi RB RD RE             ; RE := n – i (unused value)
+  sub RB RD RE              ; RE := n – i (unused value)
   bri zero memset_done      ; exit the loop
 
   add RA RD RE              ; RE := RA + i (address of the word to set)
   str RC RE                 ; set the word at address RE to value in RC
 
   inc RD                    ; i := i + 1
+  jpi memset_loop           ; repeat the loop
 @label memset_done
   stack_restore RD RE
   return

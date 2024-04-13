@@ -8,6 +8,7 @@ class Peripherals:
     pygame.init()
     self.graphics = Graphics()
     self.keyboard = Keyboard()
+    self.terminal = Terminal()
 
   def step(self):
     for event in pygame.event.get():
@@ -23,6 +24,7 @@ class DummyPeripherals:
   def __init__(self):
     self.graphics = DummyGraphics()
     self.keyboard = DummyKeyboard()
+    self.terminal = Terminal()
 
   def step(self):
     pass
@@ -127,3 +129,11 @@ class DummyKeyboard:
   def read(self) -> int:
     print("warning: reading from dummy keyboard")
     return 0xFFFF
+
+class Terminal:
+  def __init__(self):
+    pass
+
+  def write(self, s: int):
+    print(chr(s), end="")
+    sys.stdout.flush()

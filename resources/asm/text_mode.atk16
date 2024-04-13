@@ -1,8 +1,20 @@
 @use ext_string_io:*
 
 @include %bootstrap
+@include %std_mem
+
+@label text_buffer_size
+  2048
 
 @label main
+  ; use memset to clear the text buffer
+  ldi vt_text_mem RA        ; RA := text buffer address pointer
+  ldr RA RA                 ; RA := text buffer address
+  ldi text_buffer_size RB   ; RB := pointer to 1024
+  ldr RB RB                 ; RB := 1024
+  ldi 0 RC                  ; RC := 0
+  calli memset
+
   cursor_to_line RC 1
   put_string RC RB " HELLO #vaincoodijutut"
   new_line RC
@@ -16,7 +28,7 @@
 @label loop
   jpi loop
 
-@label my_keyboard_isr
+@label keyboard_isr
   stack_stash RA RB RD
   ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
   ldr RA RA               ; RA := Keyboard peripheral address deref
@@ -54,5 +66,5 @@
 
 @address vt_ISR0
 @begin_override
-  my_keyboard_isr
+  keyboard_isr
 @end_override
