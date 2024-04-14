@@ -12,14 +12,14 @@
 ;
 ; To initialize the bump allocator, call bump_reset.
 ;
-; The arena allocator cannot free individual blocks, only reset the entire heap.
+; The bump allocator cannot free individual blocks, only reset the entire heap.
 ;
 ; The memory layout is as follows:
 ; 0xE7EF (heap_segment)       alloc_next value
 ; 0xE7EE downwards            allocated blocks
 ;
 ; The alloc_next value is a pointer to the next free word in the heap.
-; The alloc_next value is stored in the first word of the heap.
+; It is stored in the first word of the heap.
 
 @label bump_next_p
   heap_segment
