@@ -132,22 +132,75 @@ class Keyboard:
   def __init__(self, set_irq_line: Callable[[int], None]):
     # mimic electronic behaviour my assigning a random value at start
     self.latest_pressed: int = random.randrange(0, 2 ** 16)
-    self.shift_pressed = False
     self.set_irq_line = set_irq_line
+
+    self.shift_pressed = False
+    self.meta_pressed = False
 
   def set_key_down(self, i: int):
     if i == pygame.K_LSHIFT or i == pygame.K_RSHIFT:
       self.shift_pressed = True
       return
 
-    if i == pygame.K_RETURN:
-      self.latest_pressed = 10
+    if i == pygame.K_LALT or i == pygame.K_RALT or i == pygame.K_LMETA or i == pygame.K_RMETA:
+      self.meta_pressed = True
+      return
 
     elif 0 <= i <= 0xFFFF:
       # sometimes the keycodes are out of range, don't know why
-      if self.shift_pressed:
-        self.latest_pressed = i - 32 # FIXME this only works for uppercase letters
-                                     # for e.g. shift + 1 should be "!" but it's something else
+
+      # manually map some keys to the nordic MacOS layout
+      # should work for some parts for a US layout as well
+      if i == pygame.K_RETURN:
+        self.latest_pressed = 10
+      elif i == pygame.K_SPACE:
+        self.latest_pressed = i
+      elif self.shift_pressed and self.meta_pressed and i == 56: # 8
+        self.latest_pressed = 123          # {
+      elif self.shift_pressed and self.meta_pressed and i == 57: # 9
+        self.latest_pressed = 125          # }
+      elif self.shift_pressed and self.meta_pressed and i == 52: # 4
+        self.latest_pressed = 2            # smiley opaque
+      elif self.shift_pressed and i == 60: # <
+        self.latest_pressed = 62           # >
+      elif self.shift_pressed and i == 48: # 0
+        self.latest_pressed = 61           # =
+      elif self.shift_pressed and i == 43: # +
+        self.latest_pressed = 63           # ?
+      elif self.shift_pressed and i == 44: # ,
+        self.latest_pressed = 59           # ;
+      elif self.shift_pressed and i == 45: # -
+        self.latest_pressed = 95           # _
+      elif self.shift_pressed and i == 46: # .
+        self.latest_pressed = 58           # :
+      elif self.shift_pressed and i == 39: # '
+        self.latest_pressed = 42           # *
+      elif self.shift_pressed and i == 52: # 4
+        self.latest_pressed = 1            # smiley transparent
+      elif self.shift_pressed and i == 168: # ¨
+        self.latest_pressed = 94           # ^
+      elif self.shift_pressed and i < 65:  # number row
+        self.latest_pressed = i - 16       # symbols above the number row
+      elif self.shift_pressed:             # a - z
+        self.latest_pressed = i - 32       # A - Z
+      elif self.meta_pressed and i == 49:  # 1
+        self.latest_pressed = 169          # ©
+      elif self.meta_pressed and i == 50:  # 2
+        self.latest_pressed = 64           # @
+      elif self.meta_pressed and i == 51:  # 3
+        self.latest_pressed = 163          # £
+      elif self.meta_pressed and i == 52:  # 4
+        self.latest_pressed = 36           # $
+      elif self.meta_pressed and i == 55:  # 7
+        self.latest_pressed = 124          # |
+      elif self.meta_pressed and i == 56:  # 8
+        self.latest_pressed = 91           # [
+      elif self.meta_pressed and i == 57:  # 9
+        self.latest_pressed = 93           # ]
+      elif self.meta_pressed and i < 65:   # number row
+        self.latest_pressed = i + 14       # symbols below the number row
+      elif i == 168:                       # ¨
+        self.latest_pressed = 126          # ~
       else:
         self.latest_pressed = i
 
@@ -156,6 +209,9 @@ class Keyboard:
   def set_key_up(self, i: int):
     if i == pygame.K_LSHIFT or i == pygame.K_RSHIFT:
       self.shift_pressed = False
+
+    elif i == pygame.K_LALT or i == pygame.K_RALT or i == pygame.K_LMETA or i == pygame.K_RMETA:
+      self.meta_pressed = False
 
   def read(self) -> int:
     return self.latest_pressed
