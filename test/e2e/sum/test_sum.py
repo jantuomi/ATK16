@@ -1,19 +1,8 @@
-from atk16_asm import assemble
-from atk16_emu import Machine
-from test.utils import pad_bytearray
+from test.utils import assemble_and_run_until_halted
 
 def test_sum():
-  filename = "test/e2e/sum/sum.atk16"
-  with open(filename, "r") as f:
-    source = f.read()
-
-  obj = assemble(source, filename)
-  rom_image = pad_bytearray(obj.program)
-
-  machine = Machine()
-  machine.load_rom_image(rom_image)
-  machine.reset()
-  machine.run_until_halted()
-  machine.print_state_summary()
+  machine = assemble_and_run_until_halted(
+    "test/e2e/sum/sum.atk16"
+  )
 
   assert machine.rb.value == 30

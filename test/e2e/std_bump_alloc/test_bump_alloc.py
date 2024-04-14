@@ -1,6 +1,4 @@
-from atk16_asm import assemble
-from atk16_emu import Machine
-from test.utils import pad_bytearray, assemble_and_run_until_halted
+from test.utils import assemble_and_run_until_halted
 
 def test_bump_reset():
   machine = assemble_and_run_until_halted(

@@ -1,20 +1,9 @@
-from atk16_asm import assemble
-from atk16_emu import Machine
-from test.utils import pad_bytearray
+from test.utils import assemble_and_run_until_halted
 
 def test_memset():
-  filename = "test/e2e/std_mem/run_memset.atk16"
-  with open(filename, "r") as f:
-    source = f.read()
-
-  obj = assemble(source, filename)
-  rom_image = pad_bytearray(obj.program)
-
-  machine = Machine()
-  machine.load_rom_image(rom_image)
-  machine.reset()
-  machine.run_until_halted()
-  machine.print_state_summary()
+  machine = assemble_and_run_until_halted(
+    "test/e2e/std_mem/run_memset.atk16"
+  )
 
   addr = 0x9000 - 0x8000
   n = 5
@@ -22,18 +11,9 @@ def test_memset():
   assert all([x == value for x in machine.ram.memory[addr:addr+n]])
 
 def test_memcopy():
-  filename = "test/e2e/std_mem/run_memcopy.atk16"
-  with open(filename, "r") as f:
-    source = f.read()
-
-  obj = assemble(source, filename)
-  rom_image = pad_bytearray(obj.program)
-
-  machine = Machine()
-  machine.load_rom_image(rom_image)
-  machine.reset()
-  machine.run_until_halted()
-  machine.print_state_summary()
+  machine = assemble_and_run_until_halted(
+    "test/e2e/std_mem/run_memcopy.atk16"
+  )
 
   addr_from = 0x9000 - 0x8000
   addr_to = 0x9100 - 0x8000

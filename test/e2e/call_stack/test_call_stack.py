@@ -1,4 +1,3 @@
-import time
 from atk16_asm import assemble
 from atk16_emu import Machine
 from test.utils import pad_bytearray
