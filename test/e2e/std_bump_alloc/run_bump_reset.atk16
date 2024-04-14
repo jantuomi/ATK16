@@ -1,0 +1,6 @@
+@include %bootstrap
+@include %std_bump_alloc
+
+@label main
+  calli bump_reset
+  hlt

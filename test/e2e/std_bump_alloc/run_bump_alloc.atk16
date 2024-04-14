@@ -1,0 +1,10 @@
+@include %bootstrap
+@include %std_bump_alloc
+
+@label main
+  calli bump_reset
+
+  ldi 5 RA          ; allocate 5 words
+  calli bump_alloc
+
+  hlt

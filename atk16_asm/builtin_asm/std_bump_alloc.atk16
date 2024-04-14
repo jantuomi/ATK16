@@ -1,0 +1,77 @@
+; Heap bump allocator implementation
+;
+; Just below the MMIO segment, which starts at 0xE7F0, is the heap segment. The heap area
+; grows down from 0xE7EF until it overlaps with the stack, which grows up from 0x8000.
+;
+; The stack pointer is stored in register SP, which is the general use register RH by spec.
+;
+; The interface consists of two functions, bump_alloc and bump_reset.
+; The bump_alloc function allocates a block of memory from the heap,
+;   returning the lowest address of the allocated block.
+; The bump_reset function resets the heap to its initial state, freeing all allocated blocks.
+;
+; To initialize the bump allocator, call bump_reset.
+;
+; The arena allocator cannot free individual blocks, only reset the entire heap.
+;
+; The memory layout is as follows:
+; 0xE7EF (heap_segment)       alloc_next value
+; 0xE7EE downwards            allocated blocks
+;
+; The alloc_next value is a pointer to the next free word in the heap.
+; The alloc_next value is stored in the first word of the heap.
+
+@label bump_next_p
+  heap_segment
+@label bump_arena_start
+  ${heap_segment - 1}
+
+@label bump_reset
+  ; reset the heap to its initial state (zero allocated blocks)
+  ; can be used to initialize the bump allocator
+  ; parameters:         none
+  ; return:             void
+  stack_stash RA RB
+
+  ldi bump_arena_start RA     ; RA := bump_arena_start pointer
+  ldr RA RA                   ; RA := bump_arena_start
+
+  ldi bump_next_p RB          ; RB := bump_next_p pointer
+  ldr RB RB                   ; RB := bump_next_p
+
+  str RA RB                   ; *bump_next_p = bump_arena_start
+
+  stack_restore RA RB
+  return
+
+@label bump_alloc
+  ; allocate a block of memory from the heap, checking for overlap with the stack
+  ; parameters:               RA = n of words to allocate
+  ; return:                   RG = address of allocated block or 0 if allocation failed
+  stack_stash RB RC
+
+  ldi bump_next_p RB          ; RB := bump_next_p pointer
+  ldr RB RB                   ; RB := bump_next_p
+  ldr RB RG                   ; RG := *bump_next_p (address of next free word)
+
+  sub RG RA RG                ; RG := RG - RA (new alloc_next value)
+
+  ; check that the new alloc_next value does not overlap with the stack
+  sub RG SP RC                ; RC := RG - SP
+  bri sign bump_alloc_overlap ; if RC < 0, bump_alloc_overlap
+                              ; otherwise allocation ok
+
+@label bump_alloc_ok
+  str RG RB                   ; *bump_next_p = RG
+
+  inc RG                      ; RG := RG + 1 (lowest address of allocated block)
+
+  jpi bump_alloc_return
+
+@label bump_alloc_overlap
+  ; allocation failed, return 0
+  ldi 0 RG
+
+@label bump_alloc_return
+  stack_restore RB RC
+  return

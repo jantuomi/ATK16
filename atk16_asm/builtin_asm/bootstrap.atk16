@@ -2,6 +2,7 @@
 
 ; memory segments
 @let stack_segment   0x8000
+@let heap_segment    0xE7EF ; grows down from 0xE7EF until SP
 @let mmio_segment    0xE7F0
 @let terminal_addr   0xE7F0
 @let keyboard_addr   0xE7F1
