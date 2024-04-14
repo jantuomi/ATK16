@@ -77,20 +77,26 @@ def pass_3(result2: Result2) -> Result3:
         symbols[args[0]] = eval_expr(symbols, args[1])
         continue
       case _:
-        if override_mode:
-          # TODO this is a bit inefficient, but works
-          result_lines = list(filter(lambda l: l.address != address, result_lines))
-
         dbg_original_text = " ".join(line.original_parts)
         dbg_expanded_text = " ".join(line.parts)
-        save_dbg_source(address, line.src_file, line.line_num, dbg_expanded_text, dbg_original_text)
-        result_lines.append(Result3Line(
+
+        res_line = Result3Line(
           line_num=line.line_num,
           src_file=line.src_file,
           parts=line.parts,
           address=address,
           original_parts=line.original_parts,
-        ))
+        )
+
+        if override_mode:
+          for i in range(len(result_lines)):
+            if result_lines[i].address == address:
+              result_lines[i] = res_line # overwrite the existing line
+              break
+        else:
+          result_lines.append(res_line)
+
+        save_dbg_source(address, line.src_file, line.line_num, dbg_expanded_text, dbg_original_text)
         address += 1
 
   result_lines.sort(key=lambda l: l.address)

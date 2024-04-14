@@ -1,0 +1,14 @@
+@include %bootstrap
+@include %std_bump_alloc
+
+@label n
+  0x8000
+
+@label main
+  calli bump_reset
+
+  ldi n RA          ; allocate too many words
+  ldr RA RA
+  calli bump_alloc
+
+  hlt
