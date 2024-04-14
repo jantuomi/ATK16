@@ -1,11 +1,9 @@
 @include %bootstrap
-@include lib
+@include %std_math
 
 ; values replaced by test driver code
-@label INPUT_A
-  %INPUT_A%
-@label INPUT_B
-  %INPUT_B%
+@data INPUT_A %INPUT_A%
+@data INPUT_B %INPUT_B%
 
 @label main
   ldi INPUT_A RA

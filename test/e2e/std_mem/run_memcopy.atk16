@@ -1,10 +1,8 @@
 @include %bootstrap
 @include %std_mem
 
-@label mem_offset_from
-  0x9000
-@label mem_offset_to
-  0x9100
+@data mem_offset_from 0x9000
+@data mem_offset_to 0x9100
 
 @label main
   ; set values 0x0000..0x0004 to 3

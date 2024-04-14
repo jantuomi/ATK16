@@ -3,8 +3,7 @@
 @include %bootstrap
 @include %std_mem
 
-@label text_buffer_size
-  2048
+@data text_buffer_size 2048
 
 @label main
   ; use memset to clear the text buffer

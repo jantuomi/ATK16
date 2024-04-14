@@ -1,8 +1,7 @@
 @include %bootstrap
 @include %std_bump_alloc
 
-@label n
-  0x8000
+@data n 0x8000
 
 @label main
   calli bump_reset

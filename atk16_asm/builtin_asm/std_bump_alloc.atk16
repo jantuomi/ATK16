@@ -21,10 +21,8 @@
 ; The alloc_next value is a pointer to the next free word in the heap.
 ; It is stored in the first word of the heap.
 
-@label bump_next_p
-  heap_segment
-@label bump_arena_start
-  ${heap_segment - 1}
+@data bump_next_p heap_segment
+@data bump_arena_start ${heap_segment - 1}
 
 @label bump_reset
   ; reset the heap to its initial state (zero allocated blocks)

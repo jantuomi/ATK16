@@ -1,7 +1,6 @@
 @include %bootstrap
 
-@label iters
-  51
+@data iters 51
 
 @label main
   ldi iters RA

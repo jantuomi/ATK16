@@ -31,10 +31,10 @@
 @let vt_text_mem     0x19 ; Text memory buffer address
 
 @address vector_table
-  hlt_isr        ; 0x10
-  hlt_isr        ; 0x11
-  hlt_isr        ; 0x12
-  hlt_isr        ; 0x13
+  no_op_isr      ; 0x10
+  no_op_isr      ; 0x11
+  no_op_isr      ; 0x12
+  no_op_isr      ; 0x13
   stack_segment  ; 0x14
   terminal_addr  ; 0x15
   keyboard_addr  ; 0x16
@@ -42,9 +42,13 @@
   sprite_mem     ; 0x18
   text_mem       ; 0x19
 
-@label hlt_isr
-  ldi 0x55 RE
-  hlt
+@label no_op_isr
+  rti
+
+; Define data segment location to this address
+; Programs can use `@data label value` to inject data here
+@label data_segment
+@data_segment
 
 ; Example ISR for keyboard to terminal
 ; @label keyboard_to_terminal_isr

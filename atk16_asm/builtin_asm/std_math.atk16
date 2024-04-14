@@ -1,7 +1,5 @@
-@label mul_sign_mask
-  ${2 ** 15}
-@label mul_not_mask
-  0xFFFF
+@data mul_sign_mask ${2 ** 15}
+@data mul_not_mask 0xFFFF
 
 @label mul
   ; multiply a signed (a) and a signed (b)

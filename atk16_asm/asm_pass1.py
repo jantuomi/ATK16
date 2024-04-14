@@ -35,6 +35,9 @@ def pass_1(result0: Result0) -> Result1:
           expansion = mod_expansions[op]
           if ops == "*" or op in ops_split:
             operations[op] = expansion
+      case "%%data_segment":
+        # drop the data_segment sentinel
+        continue
       case _:
         result_lines.append(Result1Line(
           src_file=line.src_file,

@@ -1,5 +1,5 @@
 @include %bootstrap
-@include lib
+@include %std_math
 
 @let INPUT %INPUT% ; value replaced by test driver code
 
