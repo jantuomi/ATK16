@@ -2,10 +2,10 @@
 
 ; memory segments
 @let stack_segment   0x8000
-@let mmio_segment    0xE000
-@let terminal_addr   0xE000
-@let keyboard_addr   0xE001
-@let gr_mode_addr    0xE002
+@let mmio_segment    0xE7F0
+@let terminal_addr   0xE7F0
+@let keyboard_addr   0xE7F1
+@let gr_mode_addr    0xE7F2
 @let sprite_mem      0xE800
 @let text_mem        0xF800 ; to 0xFFFF
 ; note: sprite memory & text memory can use the same space

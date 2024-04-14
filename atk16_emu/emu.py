@@ -196,7 +196,7 @@ class Machine:
     if addr < 2 ** 15:
       return self.rom.read(addr & 0x7FFF)
     else:
-      if addr == 0xE001:
+      if addr == 0xE7F1:
         return self.peripherals.keyboard.read()
       else:
         return self.ram.read(addr & 0x7FFF)
@@ -205,15 +205,15 @@ class Machine:
     if addr < 2 ** 15:
       raise ValueError(f"Cannot write to ROM, addr: 0x{addr:>04x}")
     else:
-      if addr == 0xE002 and value == 0b00:
+      if addr == 0xE7F2 and value == 0b00:
         self.peripherals.graphics.deactivate()
-      elif addr == 0xE002 and value == 0b01:
+      elif addr == 0xE7F2 and value == 0b01:
         self.peripherals.graphics.activate_tpu()
-      elif addr == 0xE002 and value == 0b10:
+      elif addr == 0xE7F2 and value == 0b10:
         self.peripherals.graphics.activate_ppu()
       elif 0xF800 <= addr <= 0xFFFF:
         self.peripherals.graphics.write(addr, value)
-      elif addr == 0xE000:
+      elif addr == 0xE7F0:
         self.peripherals.terminal.write(value)
       else:
         self.ram.write(addr & 0x7FFF, value)
