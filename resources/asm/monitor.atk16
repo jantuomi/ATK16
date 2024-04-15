@@ -1,9 +1,10 @@
-@use ext_string_io:*
-
 @include %bootstrap
 @include %std_mem
+@include %std_term
 
 @data text_buffer_size 2048
+
+@data hello_string "foobar baz\n"
 
 @label main
   ; use memset to clear the text buffer
@@ -14,79 +15,17 @@
   ldi 0 RC                  ; RC := 0
   calli memset
 
-  cursor_to_line RC 1
-  put_string RC RB " »» ATK16 monitor v0.1 »»"
-  new_line RC
-  put_string RC RB " Run [help] for a list of commands"
-  new_line RC
-  new_line RC
-  put_string RC RB " > "
-
   set_graphics_mode gr_text_mode
+
+; @data test_char ${ord('A')}
+;   ldi test_char RA          ; RA := 'A' pointer
+;   ldr RA RA                 ; RA := 'A'
+;   calli log_term_char
+
+  ldi hello_string RA        ; RA := hello string pointer
+  calli log_term_string
+
+  ; loop forever
 
 @label loop
   jpi loop
-
-@data row_index_mask ${64 - 1}
-
-@label keyboard_isr
-  stack_stash RA RB RD RE
-  ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
-  ldr RA RA               ; RA := Keyboard peripheral address deref
-  ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
-  ldi vt_term_pp_addr RB  ; RB := Terminal peripheral address pointer
-  ldr RB RB               ; RB := Terminal peripheral address deref
-
-  mov RA RD               ; RD := character code
-  subi RD 5 RD            ; if code == 10 (enter key), then run newline handler
-  subi RD 5 RD
-  bri zero keyboard_isr_newline
-
-  mov RA RD               ; if code == 8 (backspace key), then run backspace handler
-  subi RD 5 RD
-  subi RD 3 RD
-
-  bri zero keyboard_isr_backspace
-
-  ldi row_index_mask RE   ; else code is not special; write it to text buffer
-  ldr RE RE               ; if cursor is not at the end of the line
-  and RC RE RE
-
-@data row_index_line_end 39
-  ldi row_index_line_end RD
-  ldr RD RD               ; RD := 39
-
-  sub RE RD RD            ; if row index == 39, then skip writing character
-  bri zero keyboard_isr_end
-
-  str RA RC
-  addi RC 1 RC
-  jpi keyboard_isr_end
-
-@label keyboard_isr_newline
-  new_line RC
-  put_string RC RB " > "
-  jpi keyboard_isr_end
-
-@label keyboard_isr_backspace
-  ; check that RC is not at the beginning of the prompt
-  ldi row_index_mask RE
-  ldr RE RE
-  and RC RE RE          ; RE := RC & 63, i.e. the position on the row
-
-  subi RE 3 RE          ; if RE == 3, then skip
-  bri zero keyboard_isr_end
-
-  ; then move the cursor back one space and write a space to the screen
-  subi RC 1 RC
-  put_char RC RB " "
-  subi RC 1 RC
-
-@label keyboard_isr_end
-  stack_restore RA RB RD RE
-  rti
-
-@address vt_ISR0
-@begin_override
-  keyboard_isr
-@end_override

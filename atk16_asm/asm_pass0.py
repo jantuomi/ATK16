@@ -15,14 +15,14 @@ class Result0Line:
 class Result0:
   lines: list[Result0Line]
 
-InsertAtDataSegment = Callable[[str, str, str, int], None]
+InsertAtDataSegment = Callable[[str, list[str], str, int], None]
 
 def pass_0(lines: list[str], file_name: str, insert_at_data_segment: InsertAtDataSegment | None = None) -> Result0:
   file_name = file_name if file_name.endswith(".atk16") else file_name + ".atk16"
   result_lines: list[Result0Line] = []
 
   if not insert_at_data_segment:
-    def _insert_at_data_segment(label: str, value: str, context_file_name: str, context_line_num: int):
+    def _insert_at_data_segment(label: str, values: list[str], context_file_name: str, context_line_num: int):
       data_segment_index = None
       for idx, result_line in enumerate(result_lines):
         if result_line.line == "%%data_segment":
@@ -32,18 +32,42 @@ def pass_0(lines: list[str], file_name: str, insert_at_data_segment: InsertAtDat
       if data_segment_index is None:
         raise Exception(f"Error: @data before @data_segment in {context_file_name}:{context_line_num}")
 
-      # Inverted order because of insert semantics
-      result_lines.insert(data_segment_index + 1, Result0Line(
-        src_file=context_file_name,
-        line_num=context_line_num,
-        line=f"${{{value}}}"
-      ))
-
       result_lines.insert(data_segment_index + 1, Result0Line(
         src_file=context_file_name,
         line_num=context_line_num,
         line=f"@label {label}"
       ))
+
+      offset = 2
+      for value in values:
+        if value[0] == "\"" and value[-1] == "\"":
+          string_chars = value[1:-1]
+          string_chars = string_chars.replace("\\n", "\n")
+          string_chars = string_chars.replace("\\r", "\r")
+          string_chars = string_chars.replace("\\t", "\t")
+
+          length = len(string_chars)
+          result_lines.insert(data_segment_index + offset, Result0Line(
+            src_file=context_file_name,
+            line_num=context_line_num,
+            line=f"  {length}"
+          ))
+          offset += 1
+
+          for char in string_chars:
+            result_lines.insert(data_segment_index + offset, Result0Line(
+              src_file=context_file_name,
+              line_num=context_line_num,
+              line=f"  {ord(char)}"
+            ))
+            offset += 1
+        else:
+          result_lines.insert(data_segment_index + offset, Result0Line(
+            src_file=context_file_name,
+            line_num=context_line_num,
+            line=f"  ${{{value}}}"
+          ))
+          offset += 1
 
     insert_at_data_segment = _insert_at_data_segment
 
@@ -65,12 +89,11 @@ def pass_0(lines: list[str], file_name: str, insert_at_data_segment: InsertAtDat
         ))
 
       case "@data":
-        if len(args) != 2:
+        if len(args) < 2:
           raise Exception(f"Error: @data missing arguments in {file_name}:{line_num}")
 
         name = args[0]
-        data = args[1]
-
+        data = args[1:]
         insert_at_data_segment(name, data, file_name, line_num)
 
       case "@include":

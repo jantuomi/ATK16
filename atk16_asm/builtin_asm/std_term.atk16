@@ -1,0 +1,46 @@
+@label log_term_char
+  ; send a character to the terminal
+  ; parameters:             RA = character code
+  ; return:                 none
+
+  ; RG is allowed to be clobbered by the calling convention
+  ldi vt_term_pp_addr RG    ; RG := terminal address pointer
+  ldr RG RG                 ; RG := terminal address
+
+  str RA RG                 ; write 'A' to terminal
+  return
+
+
+
+@label log_term_string
+  ; send a string to the terminal
+  ; parameters:             RA = address of string allocation
+  ; return:                 none
+
+  ; strings are encoded as a length word followed by the string data
+  ; RG is allowed to be clobbered by the calling convention
+  ldi vt_term_pp_addr RG    ; RG := terminal address pointer
+  ldr RG RG                 ; RG := terminal address
+
+  stack_stash RA RB RC RD
+
+  ldr RA RB                 ; RB := string length
+  ldi 0 RC                  ; RC := 0
+
+@label log_term_string_loop
+  sub RB RC RD              ; RD := remaining length
+  bri zero log_term_string_done
+
+  add RC RA RD              ; RD := pointer to next character - 1
+  addi RD 1 RD              ; RD := pointer to next character
+
+  ldr RD RD                 ; RD := next character
+
+  str RD RG                 ; write character to terminal
+  inc RC                    ; increment pointer
+
+  jpi log_term_string_loop
+
+@label log_term_string_done
+  stack_restore RA RB RC RD
+  return

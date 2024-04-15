@@ -117,7 +117,11 @@ def parse(tokens: list[str]) -> list[Term]:
     elif term.startswith("${") and term.endswith("}"):
       return Expr(term[2:-1])
     elif term.startswith("\"") and term.endswith("\""):
-      return StringLiteral(term[1:-1])
+      string_chars = term[1:-1]
+      string_chars = string_chars.replace("\\n", "\n")
+      string_chars = string_chars.replace("\\r", "\r")
+      string_chars = string_chars.replace("\\t", "\t")
+      return StringLiteral(string_chars)
     elif term.startswith("&"):
       return LabelRef(term[1:])
     elif term.startswith("@"):
