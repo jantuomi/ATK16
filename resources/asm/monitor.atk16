@@ -14,39 +14,45 @@
 
 @label main
   ; initialize global variables
+  ; BEGIN cursor_p := text_mem
   ldi cursor_p RA
   ldr RA RA
   ldi vt_text_mem RB
   ldr RB RB
-  str RB RA                 ; cursor_p := text_mem
+  str RB RA
+  ; END
 
   ; use memset to clear the text buffer
+  ; BEGIN memset(text_mem, 0, text_buffer_size)
   ldi vt_text_mem RA        ; RA := text buffer address pointer
   ldr RA RA                 ; RA := text buffer address
-  ldi text_buffer_size RB   ; RB := pointer to 1024
-  ldr RB RB                 ; RB := 1024
+  ldi text_buffer_size RB   ; RB := pointer to text_buffer_size
+  ldr RB RB                 ; RB := text_buffer_size
   ldi 0 RC                  ; RC := 0
   calli memset
+  ; END
 
   set_graphics_mode gr_text_mode
 
-  calli cursor_newline
-  ldi 65 RA
-  calli cursor_put_char
+  calli newline
 
-; @data test_char ${ord('A')}
-;   ldi test_char RA          ; RA := 'A' pointer
-;   ldr RA RA                 ; RA := 'A'
-;   calli log_term_char
+  ; BEGIN put_string(title_string)
+  ldi title_string RA
+  calli put_string
+  ; END
 
-  ; ldi hello_string RA        ; RA := hello string pointer
-  ; calli log_term_string
+  calli newline
+
+  ; BEGIN put_string(subtitle_string)
+  ldi subtitle_string RA
+  calli put_string
+  ; END
 
 ; loop forever
 @label loop
   jpi loop
 
-@label cursor_newline
+@label newline
   ; move cursor to the beginning of the next line
   ; parameters:               none
   ; returns:                  none
@@ -64,7 +70,7 @@
   stack_restore RA RB
   return
 
-@label cursor_put_char
+@label put_char
   ; put a character at the current cursor position
   ; parameters:               RA = character to put
   ; returns:                  none
@@ -81,15 +87,24 @@
   stack_restore RB RC
   return
 
-@label cursor_put_string
+@label put_string
   ; put a string at the current cursor position
   ; parameters:               RA = string_p
   ; returns:                  none
 
-  stack_stash RB RC
-  ldi cursor_p RB
-  ldr RB RB
-  ldr RB RC
+  stack_stash RA RB RC
+  ldr RA RB                   ; RB := string length
+  addi RA 1 RC                ; RC := pointer to first character
+@label put_string_loop
+  subi RB 0 RB                ; exit if RB has been decremented to 0
+  bri zero put_string_done    ; i.e. no more characters to put
 
-  ; TODO: implement
+  ldr RC RA                   ; RA := character to put
+  calli put_char
+
+  inc RC
+  subi RB 1 RB
+  jpi put_string_loop
+@label put_string_done
+  stack_restore RA RB RC
   return
