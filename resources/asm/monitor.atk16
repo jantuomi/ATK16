@@ -2,11 +2,24 @@
 @include %std_mem
 @include %std_term
 
+; Constants
 @data text_buffer_size 2048
 
-@data hello_string "foobar baz\n"
+; Global variable pointers
+; 0xE800 - 0xEFFF: sprite buffer space that is unused in this program
+@data cursor_p 0xE800
+
+@data title_string " »» ATK16 monitor v0.1 »»"
+@data subtitle_string " Run [help] for a list of commands"
 
 @label main
+  ; initialize global variables
+  ldi cursor_p RA
+  ldr RA RA
+  ldi vt_text_mem RB
+  ldr RB RB
+  str RB RA                 ; cursor_p := text_mem
+
   ; use memset to clear the text buffer
   ldi vt_text_mem RA        ; RA := text buffer address pointer
   ldr RA RA                 ; RA := text buffer address
@@ -17,15 +30,66 @@
 
   set_graphics_mode gr_text_mode
 
+  calli cursor_newline
+  ldi 65 RA
+  calli cursor_put_char
+
 ; @data test_char ${ord('A')}
 ;   ldi test_char RA          ; RA := 'A' pointer
 ;   ldr RA RA                 ; RA := 'A'
 ;   calli log_term_char
 
-  ldi hello_string RA        ; RA := hello string pointer
-  calli log_term_string
+  ; ldi hello_string RA        ; RA := hello string pointer
+  ; calli log_term_string
 
-  ; loop forever
-
+; loop forever
 @label loop
   jpi loop
+
+@label cursor_newline
+  ; move cursor to the beginning of the next line
+  ; parameters:               none
+  ; returns:                  none
+
+  stack_stash RA RB
+  ldi cursor_p RA
+  ldr RA RA
+  ldr RA RB
+
+  slri RB 6 RB                ; cursor = cursor / 64
+  addi RB 1 RB                ; cursor = cursor + 1
+  slli RB 6 RB                ; cursor = cursor * 64
+
+  str RB RA
+  stack_restore RA RB
+  return
+
+@label cursor_put_char
+  ; put a character at the current cursor position
+  ; parameters:               RA = character to put
+  ; returns:                  none
+
+  stack_stash RB RC
+  ldi cursor_p RB
+  ldr RB RB
+  ldr RB RC
+
+  str RA RC
+  inc RC
+
+  str RC RB
+  stack_restore RB RC
+  return
+
+@label cursor_put_string
+  ; put a string at the current cursor position
+  ; parameters:               RA = string_p
+  ; returns:                  none
+
+  stack_stash RB RC
+  ldi cursor_p RB
+  ldr RB RB
+  ldr RB RC
+
+  ; TODO: implement
+  return
