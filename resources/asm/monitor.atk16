@@ -1,25 +1,42 @@
+@use monitor_macros:*
+
 @include %bootstrap
 @include %std_mem
 @include %std_term
+@include %std_bump_alloc
 
 ; Constants
-@data text_buffer_size 2048
+@data text_buffer_size    2048
+@data input_buffer_size   64
 
 ; Global variable pointers
 ; 0xE800 - 0xEFFF: sprite buffer space that is unused in this program
-@data cursor_p 0xE800
+@data text_cursor_p       0xE800
+@data input_buffer_p      0xE801
+@data input_cursor_p      0xE802
 
 @data title_string " »» ATK16 monitor v0.1 »»"
 @data subtitle_string " Run [help] for a list of commands"
 
 @label main
+  ; initialize heap allocator
+  calli bump_reset
+
   ; initialize global variables
-  ; BEGIN cursor_p := text_mem
-  ldi cursor_p RA
+  ; BEGIN text_cursor_p = text_mem
+  ldi text_cursor_p RA
   ldr RA RA
   ldi vt_text_mem RB
   ldr RB RB
   str RB RA
+  ; END
+
+  ; BEGIN input_buffer_p = alloc(64)
+  ldi input_buffer_size RA
+  calli bump_alloc
+  ldi input_buffer_p RA
+  ldr RA RA
+  str RG RA
   ; END
 
   ; use memset to clear the text buffer
@@ -34,14 +51,14 @@
 
   set_graphics_mode gr_text_mode
 
-  calli newline
+  m_newline RA RB
 
   ; BEGIN put_string(title_string)
   ldi title_string RA
   calli put_string
   ; END
 
-  calli newline
+  m_newline RA RB
 
   ; BEGIN put_string(subtitle_string)
   ldi subtitle_string RA
@@ -50,7 +67,19 @@
 
 ; loop forever
 @label loop
+  calli wait_for_input_newline
+
+  ; BEGIN critical section
+  ; disable_interrupts
+  ; <work>
+  ; enable_interrupts
+  ; END
   jpi loop
+
+;;; Subroutines
+
+; TODO: move the implementation body (between stack_stash and stack_restore) to
+; a macro so that it can be inlined without function call overhead when needed
 
 @label newline
   ; move cursor to the beginning of the next line
@@ -58,15 +87,7 @@
   ; returns:                  none
 
   stack_stash RA RB
-  ldi cursor_p RA
-  ldr RA RA
-  ldr RA RB
-
-  slri RB 6 RB                ; cursor = cursor / 64
-  addi RB 1 RB                ; cursor = cursor + 1
-  slli RB 6 RB                ; cursor = cursor * 64
-
-  str RB RA
+  m_newline RA RB
   stack_restore RA RB
   return
 
@@ -76,14 +97,7 @@
   ; returns:                  none
 
   stack_stash RB RC
-  ldi cursor_p RB
-  ldr RB RB
-  ldr RB RC
-
-  str RA RC
-  inc RC
-
-  str RC RB
+  m_put_char RA RB RC
   stack_restore RB RC
   return
 
@@ -92,7 +106,7 @@
   ; parameters:               RA = string_p
   ; returns:                  none
 
-  stack_stash RA RB RC
+  stack_stash RA RB RC RD RE
   ldr RA RB                   ; RB := string length
   addi RA 1 RC                ; RC := pointer to first character
 @label put_string_loop
@@ -100,11 +114,31 @@
   bri zero put_string_done    ; i.e. no more characters to put
 
   ldr RC RA                   ; RA := character to put
-  calli put_char
+  m_put_char RA RD RE         ; inline the put_char subroutine to avoid function call overhead
 
   inc RC
   subi RB 1 RB
   jpi put_string_loop
 @label put_string_done
-  stack_restore RA RB RC
+  stack_restore RA RB RC RD RE
+  return
+
+@label wait_for_input_newline
+  ; wait for a newline character in the input buffer
+  ; parameters:               none
+  ; returns:                  RG = key code
+  stack_stash RA RB
+  ldi 10 RB                   ; RB := newline character
+@label wait_for_input_newline_loop
+  ldi input_cursor_p RA       ; RA := data segment pointer
+  ldr RA RA                   ; RA := &&char
+  ldr RA RA                   ; RA := &char
+  ldr RA RA                   ; RA := char
+
+  sub RA RB RA                ; if RA == newline, then stop waiting
+  bri zero wait_for_input_newline_done
+
+  jpi wait_for_input_newline_loop
+@label wait_for_input_newline_done
+  stack_restore RA RB
   return
