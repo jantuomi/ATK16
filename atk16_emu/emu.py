@@ -129,7 +129,10 @@ class Machine:
 
     self.steps_taken = 0
     self.running = False
-    self.is_in_irq = False
+
+    self.interrupts = Interrupts(4)
+    self.is_critical_section: bool = False
+    self.active_interrupt_line = None
 
     self.peripherals_enabled = peripherals_enabled
     if peripherals_enabled:
@@ -190,6 +193,13 @@ class Machine:
 
     new_machine.running = self.running
 
+    new_machine.interrupts = Interrupts(self.interrupts.n)
+    for i in range(self.interrupts.n):
+      new_machine.interrupts.interrupt_lines[i] = self.interrupts.interrupt_lines[i]
+
+    new_machine.is_critical_section = self.is_critical_section
+    new_machine.active_interrupt_line = self.active_interrupt_line
+
     return new_machine
 
   def mem_read(self, addr: int):
@@ -211,6 +221,9 @@ class Machine:
         self.peripherals.graphics.activate_tpu()
       elif addr == 0xE7F2 and value == 0b10:
         self.peripherals.graphics.activate_ppu()
+      elif addr == 0xE7F3:
+        state = value & 1
+        self.is_critical_section = state == 1
       elif 0xF800 <= addr <= 0xFFFF:
         self.peripherals.graphics.write(addr, value)
       elif addr == 0xE7F0:
@@ -268,18 +281,26 @@ class Machine:
     raise ValueError(f"Invalid flag number: {n}")
 
   def set_irq_line(self, line: int):
-    if not self.is_in_irq:
-      self.ipc.value = self.pc.value
-      isr_addr_pointer = 0x10 + line # see bootstrap.atk16 vector table
-      isr_addr = self.mem_read(isr_addr_pointer)
-      self.pc.value = isr_addr
-      self.is_in_irq = True
+    self.interrupts.set_interrupt(line)
 
   def step(self):
     if not self.running:
       raise RuntimeError("Machine is not running")
 
     self.steps_taken += 1
+
+    priority_interrupt_line = self.interrupts.get_priority_interrupt()
+    if priority_interrupt_line is not None and not self.is_critical_section:
+      # TODO: instead of handling interrupts in Python like this, maybe emulate
+      # ISRP0 and ISRP1 instructions properly? Should be the same effect,
+      # ISRP0-1 are kind of magical instructions.
+      self.active_interrupt_line = priority_interrupt_line
+      self.ipc.value = self.pc.value
+      isr_addr_pointer = 0x10 + priority_interrupt_line # see bootstrap.atk16 vector table
+      isr_addr = self.mem_read(isr_addr_pointer)
+      self.pc.value = isr_addr
+      self.is_critical_section = True
+
     pc_addr = self.pc.value
     self.pc.step()
 
@@ -358,7 +379,6 @@ class Machine:
 
         case ISRP0():
           # interrupt service routine, read store PC in IPC register, set PC to ISRA value
-
           raise NotImplementedError()
 
         case ISRP1():
@@ -368,7 +388,12 @@ class Machine:
         case RTI():
           # return from interrupt routine, read PC from IPC register
           self.pc.value = self.ipc.value
-          self.is_in_irq = False
+          self.is_critical_section = False
+          if self.active_interrupt_line is None:
+            raise RuntimeError("RTI without active interrupt line")
+
+          self.interrupts.clear_interrupt(self.active_interrupt_line)
+          self.active_interrupt_line = None
 
         case HLT():
           self.running = False

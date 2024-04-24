@@ -27,3 +27,19 @@ def m_put_char(char_r: str, r1: str, r2: str) -> ExpandResult:
     *expand_addi(r2, "1", r2),
     *expand_str(r2, r1),
   ]
+
+def m_set_interrupt_state(r1: str, r2: str, value: int) -> ExpandResult:
+  return [
+    *expand_ldi("vt_iset_addr", r1),
+    *expand_ldr(r1, r1),
+    *expand_ldi(value, r2),
+    *expand_str(r2, r1),
+  ]
+
+@register_macro
+def m_set_critical(r1: str, r2: str) -> ExpandResult:
+  return m_set_interrupt_state(r1, r2, 1)
+
+@register_macro
+def m_clear_critical(r1: str, r2: str) -> ExpandResult:
+  return m_set_interrupt_state(r1, r2, 0)

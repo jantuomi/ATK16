@@ -15,8 +15,9 @@
 @data input_buffer_p      0xE801
 @data input_cursor_p      0xE802
 
-@data title_string " »» ATK16 monitor v0.1 »»"
+@data title_string    " »» ATK16 monitor v0.1 »»"
 @data subtitle_string " Run [help] for a list of commands"
+@data prompt_string   " > "
 
 @label main
   ; initialize heap allocator
@@ -65,21 +66,32 @@
   calli put_string
   ; END
 
+  m_newline RA RB
+  m_newline RA RB
+
+  ldi prompt_string RA
+  calli put_string
+
 ; loop forever
 @label loop
-  calli wait_for_input_newline
-
   ; BEGIN critical section
-  ; disable_interrupts
-  ; <work>
-  ; enable_interrupts
-  ; END
+  m_set_critical RA RB
+
+  calli is_newline_pressed
+  subi RG 1 RG                ; if is_newline_pressed() == 1, then loop_newline_pressed
+  bri zero loop_newline_pressed
+  jpi loop_finally
+
+@label loop_newline_pressed
+  ; TODO
+  jpi loop_finally
+
+@label loop_finally
+  m_clear_critical RA RB
+  ; END critical section
   jpi loop
 
 ;;; Subroutines
-
-; TODO: move the implementation body (between stack_stash and stack_restore) to
-; a macro so that it can be inlined without function call overhead when needed
 
 @label newline
   ; move cursor to the beginning of the next line
@@ -131,7 +143,7 @@
   ldi 10 RB                   ; RB := newline character
 @label wait_for_input_newline_loop
   ldi input_cursor_p RA       ; RA := data segment pointer
-  ldr RA RA                   ; RA := &&char
+  ldr RA RA                   ; RA := 0xE802
   ldr RA RA                   ; RA := &char
   ldr RA RA                   ; RA := char
 
@@ -140,5 +152,25 @@
 
   jpi wait_for_input_newline_loop
 @label wait_for_input_newline_done
+  stack_restore RA RB
+  return
+
+@label is_newline_pressed
+  ; check if the last character in the input buffer is a newline
+  ; parameters:               none
+  ; returns:                  RG = 1 if newline is pressed, 0 otherwise
+  stack_stash RA RB
+  ldi 10 RB                   ; RB := newline character
+
+  ldi input_cursor_p RA       ; RA := data segment pointer
+  ldr RA RA                   ; RA := 0xE802
+  ldr RA RA                   ; RA := &char
+  ldr RA RA                   ; RA := char
+
+  ldi 1 RG                    ; RG := 1
+  sub RA RB RA                ; if RA == newline, then return RG = 1
+  bri zero is_newline_pressed_done
+  ldi 0 RG                    ; else return RG = 0
+@label is_newline_pressed_done
   stack_restore RA RB
   return

@@ -54,3 +54,28 @@ class RAM:
       raise ValueError(f"Value {value} is out of range for {self.data_bits}-bit RAM")
 
     self.memory[addr] = value
+
+
+class Interrupts:
+  def __init__(self, n: int):
+    self.n = n
+    self.interrupt_lines = [False] * n
+
+  def set_interrupt(self, i: int):
+    if i < 0 or i >= self.n:
+      raise ValueError(f"Interrupt {i} is out of range for {self.n}-interrupt system")
+
+    self.interrupt_lines[i] = True
+
+  def clear_interrupt(self, i: int):
+    if i < 0 or i >= self.n:
+      raise ValueError(f"Interrupt {i} is out of range for {self.n}-interrupt system")
+
+    self.interrupt_lines[i] = False
+
+  def get_priority_interrupt(self) -> int | None:
+    for i in range(self.n):
+      if self.interrupt_lines[i]:
+        return i
+
+    return None

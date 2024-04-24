@@ -7,10 +7,12 @@
 @let terminal_addr   0xE7F0
 @let keyboard_addr   0xE7F1
 @let gr_mode_addr    0xE7F2
+@let iset_addr       0xE7F3
 @let sprite_mem      0xE800
 @let text_mem        0xF800 ; to 0xFFFF
 ; note: sprite memory & text memory can use the same space
 ; since they are never used at the same time
+
 
 ; graphics mode settings
 @let gr_disabled_mode 0b00
@@ -29,6 +31,7 @@
 @let vt_gr_mode_addr 0x17 ; Graphics mode setting address
 @let vt_sprite_mem   0x18 ; Sprite memory address
 @let vt_text_mem     0x19 ; Text memory buffer address
+@let vt_iset_addr    0x1A ; Interrupt set/clear address
 
 @address vector_table
   no_op_isr      ; 0x10
@@ -41,6 +44,7 @@
   gr_mode_addr   ; 0x17
   sprite_mem     ; 0x18
   text_mem       ; 0x19
+  iset_addr      ; 0x1A
 
 @label no_op_isr
   rti
