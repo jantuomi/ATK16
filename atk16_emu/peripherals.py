@@ -52,17 +52,18 @@ class TPU:
     if not self.surface:
       return
 
-    for cy in range(2 ** 3):
-      for ty in range(2 ** 5):
-        for tx in range(2 ** 6):
-          text_addr = (ty << 6) + tx
-          char_s = self.text_mem.read(text_addr)
+    for ty in range(2 ** 5):
+      for tx in range(2 ** 6):
+        text_addr = (ty << 6) + tx
+        char_s = self.text_mem.read(text_addr)
+
+        for cy in range(2 ** 3):
           char_addr = (char_s << 3) + cy
           char_d = self.char_mem.read(char_addr)
+          sy = (ty << 3) + cy
 
           for cx in range(2 ** 3):
             sx = (tx << 3) + cx
-            sy = (ty << 3) + cy
             pixel_value_bit = (char_d >> cx) & 1
 
             self.surface.set_at((sx, sy), (255 * pixel_value_bit, 255 * pixel_value_bit, 255))
