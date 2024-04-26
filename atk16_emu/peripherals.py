@@ -1,5 +1,6 @@
 import pygame
 import sys
+import os
 import random
 from .memory import RAM, ROM
 from typing import Callable
@@ -42,7 +43,7 @@ class TPU:
     self.text_mem = RAM(11, 8)
     self.char_mem = ROM(11, 8)
 
-    with open("out/charmem.bin", "rb") as f:
+    with open(os.path.join(os.path.dirname(__file__), "resources", "charmem.bin"), "rb") as f:
       charmem = f.read()
       for i in range(len(charmem)):
         self.char_mem.memory[i] = int(charmem[i]) & 0xFF

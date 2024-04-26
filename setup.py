@@ -10,7 +10,12 @@ setup(
       'atk16emu=atk16_emu.cli:main',
     ],
   },
+  package_data={
+    "atk16_asm": ["builtin_asm/*"],
+    "atk16_emu": ["resources/*"],
+  },
   install_requires=[
     "getch>=1.0",
+    "pygame>=2.5.2",
   ]
 )
