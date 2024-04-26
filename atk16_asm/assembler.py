@@ -2,6 +2,7 @@
 # Assemble ATK16 assembly to bytecode
 
 import sys
+import os
 from .asm_ops import *
 from .asm_eval import *
 from .asm_pass0 import pass_0
@@ -107,6 +108,9 @@ def main():
       src = f.read()
 
   result = assemble(src, options.infile)
+
+  out_dirname = os.path.dirname(options.outfile)
+  os.makedirs(out_dirname, exist_ok=True)
 
   with open(options.outfile, "wb") as f:
     f.write(result.program)

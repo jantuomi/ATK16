@@ -1,4 +1,0 @@
-@include %bootstrap
-
-@label main
-  jpi main
