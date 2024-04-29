@@ -2,7 +2,7 @@
 
 ## Installation
 
-In `atk16-syntax-highlighting` directory, run:
+In `atk16_syntax` directory, run:
 
     npx @vscode/vsce package
 
