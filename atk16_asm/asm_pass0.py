@@ -16,10 +16,15 @@ class Result0:
   lines: list[Result0Line]
 
 InsertAtDataSegment = Callable[[str, list[str], str, int], None]
+IncludeModule = Callable[[str], None]
 
-def pass_0(lines: list[str], file_name: str, insert_at_data_segment: InsertAtDataSegment | None = None) -> Result0:
+def pass_0(lines: list[str], file_name: str,
+           insert_at_data_segment: InsertAtDataSegment | None = None,
+           include_module: IncludeModule | None = None) -> Result0:
+
   file_name = file_name if file_name.endswith(".atk16") else file_name + ".atk16"
   result_lines: list[Result0Line] = []
+  included_module_abs_paths: list[str] = []
 
   if not insert_at_data_segment:
     def _insert_at_data_segment(label: str, values: list[str], context_file_name: str, context_line_num: int):
@@ -71,6 +76,26 @@ def pass_0(lines: list[str], file_name: str, insert_at_data_segment: InsertAtDat
 
     insert_at_data_segment = _insert_at_data_segment
 
+  if not include_module:
+    def _include_module(module_abs_path: str):
+      if module_abs_path in included_module_abs_paths:
+        return
+
+      with open(module_abs_path, "r") as f:
+        incl_lines = f.readlines()
+
+      incl_result0 = pass_0(incl_lines, asm_file_name, insert_at_data_segment)
+      for incl_line in incl_result0.lines:
+        result_lines.append(Result0Line(
+          src_file=incl_line.src_file,
+          line_num=incl_line.line_num,
+          line=incl_line.line
+        ))
+
+      included_module_abs_paths.append(module_abs_path)
+
+    include_module = _include_module
+
   for (line_num, line) in enumerate(lines):
     line_num += 1 # line numbers are 1-based
 
@@ -106,16 +131,8 @@ def pass_0(lines: list[str], file_name: str, insert_at_data_segment: InsertAtDat
           path = asm_file_name
         else:
           path = os.path.join(os.path.dirname(file_name), asm_file_name)
-        with open(path, "r") as f:
-          incl_lines = f.readlines()
 
-        incl_result0 = pass_0(incl_lines, asm_file_name, insert_at_data_segment)
-        for incl_line in incl_result0.lines:
-          result_lines.append(Result0Line(
-            src_file=incl_line.src_file,
-            line_num=incl_line.line_num,
-            line=incl_line.line
-          ))
+        include_module(path)
 
       case _:
         result_lines.append(Result0Line(

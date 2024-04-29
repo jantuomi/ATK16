@@ -1,0 +1,6 @@
+@include %bootstrap
+@include %bootstrap
+@include %bootstrap
+
+@label main
+  hlt
