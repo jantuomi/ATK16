@@ -37,7 +37,7 @@ def pass_4(result3: Result3) -> Result4:
       try:
         word = fn(meta, result3.symbols, *args)
       except Exception as e:
-        raise Exception(f"Invalid assembly at {line.src_file}:{line.line_num + 1}\n\n{line.parts}\n\n{e}") from e
+        raise Exception(f"Invalid assembly at {line.src_file}:{line.line_num}\n\n{line.parts}\n\n{e}") from e
       result_lines.append(Result4Line(
         line_num=line.line_num,
         src_file=line.src_file,
@@ -57,7 +57,7 @@ def pass_4(result3: Result3) -> Result4:
           original_text=original_text,
         ))
       except:
-        raise Exception(f"Invalid assembly at {line.src_file}:{line.line_num + 1}\n\n{line}")
+        raise Exception(f"Invalid assembly at {line.src_file}:{line.line_num}\n\n{line}")
 
   return Result4(
     operations=result3.operations,

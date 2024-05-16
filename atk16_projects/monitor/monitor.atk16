@@ -7,7 +7,7 @@
 
 ; Constants
 @data text_buffer_size    2048
-@data input_buffer_size   64
+@data input_buffer_size   36 ; 40 chars row - 2 padding - 2 for prompt
 
 ; Global variable pointers
 ; 0xE800 - 0xEFFF: sprite buffer space that is unused in this program
@@ -32,10 +32,16 @@
   str RB RA
   ; END
 
-  ; BEGIN input_buffer_p = alloc(64)
+  ; BEGIN input_buffer_p = alloc(input_buffer_size)
   ldi input_buffer_size RA
   calli bump_alloc
   ldi input_buffer_p RA
+  ldr RA RA
+  str RG RA
+  ; END
+
+  ; BEGIN input_cursor_p = input_buffer_p
+  ldi input_cursor_p RA
   ldr RA RA
   str RG RA
   ; END
@@ -135,25 +141,6 @@
   stack_restore RA RB RC RD RE
   return
 
-@label wait_for_input_newline
-  ; wait for a newline character in the input buffer
-  ; parameters:               none
-  ; returns:                  RG = key code
-  stack_stash RA RB
-  ldi 10 RB                   ; RB := newline character
-@label wait_for_input_newline_loop
-  ldi input_cursor_p RA       ; RA := data segment pointer
-  ldr RA RA                   ; RA := 0xE802
-  ldr RA RA                   ; RA := &char
-  ldr RA RA                   ; RA := char
-
-  sub RA RB RA                ; if RA == newline, then stop waiting
-  bri zero wait_for_input_newline_done
-
-  jpi wait_for_input_newline_loop
-@label wait_for_input_newline_done
-  stack_restore RA RB
-  return
 
 @label is_newline_pressed
   ; check if the last character in the input buffer is a newline
@@ -174,3 +161,76 @@
 @label is_newline_pressed_done
   stack_restore RA RB
   return
+
+@data row_index_mask ${64 - 1}
+
+@label keyboard_isr
+  stack_stash RA RB RC RD
+  ldi vt_kb_pp_addr RA    ; RA := Keyboard peripheral address pointer
+  ldr RA RA               ; RA := Keyboard peripheral address deref
+  ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
+
+  mov RA RB               ; RB := character code
+  subi RB 5 RB            ; if code == 10 (enter key), then run newline handler
+  subi RB 5 RB
+  bri zero keyboard_isr_newline
+
+  ldi text_cursor_p RC
+  ldr RC RC
+  ldr RC RC               ; RC := text_cursor_p
+
+  mov RA RB               ; if code == 8 (backspace key), then run backspace handler
+  subi RB 5 RB
+  subi RB 3 RB
+
+  bri zero keyboard_isr_backspace
+
+  ldi row_index_mask RD   ; else code is not special; write it to text buffer
+  ldr RD RD               ; if cursor is not at the end of the line
+  and RC RD RD
+
+@data row_index_line_end 39
+  ldi row_index_line_end RB
+  ldr RB RB               ; RB := 39
+
+  sub RD RB RB            ; if row index == 39, then skip writing character
+  bri zero keyboard_isr_end
+
+  m_put_char RA RB RC     ; if row index < 39, then write character to text buffer
+
+  jpi keyboard_isr_end
+
+@label keyboard_isr_newline
+  m_newline RA RB
+
+  ldi prompt_string RA
+  calli put_string
+
+  jpi keyboard_isr_end
+
+@label keyboard_isr_backspace
+  ; check that RC is not at the beginning of the prompt
+  ldi row_index_mask RD
+  ldr RD RD
+  and RC RD RD          ; RD := RC & 63, i.e. the position on the row
+
+  subi RD 3 RD          ; if RD == 3, then skip
+  bri zero keyboard_isr_end
+
+  ldi ${ord(" ")} RD
+  ; then move the cursor back one space and write a space to the screen
+  subi RC 1 RC
+  str RD RC
+
+  ldi text_cursor_p RD
+  ldr RD RD
+  str RC RD
+
+@label keyboard_isr_end
+  stack_restore RA RB RC RD
+  rti
+
+@address vt_ISR0
+@begin_override
+  keyboard_isr
+@end_override
