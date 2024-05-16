@@ -355,9 +355,13 @@ class Machine:
           self.pc.value = addr
 
         case JPI(imm):
+          # check that imm fits in 9 bits
+          if imm >= 2 ** 9:
+            raise Exception(f"JPI immediate value does not fit in 9 bits: {imm:>04x}" )
+
           # convert imm from signed (twos complement) 9-bit to a python int
-          imm = (imm & (0b011111111)) - (imm & 0b100000000)
-          self.pc.value = (self.pc.value + imm) & 0xFFFF
+          py_imm = (imm & (0b011111111)) - (imm & 0b100000000)
+          self.pc.value = (self.pc.value + py_imm) & 0xFFFF
 
         case BRR(flag, addr_reg):
           if self.check_nth_flag(flag):
@@ -407,6 +411,7 @@ class Machine:
   def decode(self, instr: int):
     opcode = (instr & 0xF000) >> 12
     opdata = instr & 0x0FFF
+
     match opcode:
       case 0b0000: return ALR(target=(opdata & 0b111000000000) >> 9,
                               left=(opdata & 0b000111000000) >> 6,

@@ -83,9 +83,10 @@
   ; BEGIN critical section
   m_set_critical RA RB
 
-  calli is_newline_pressed
-  subi RG 1 RG                ; if is_newline_pressed() == 1, then loop_newline_pressed
-  bri zero loop_newline_pressed
+  ; TODO evaluate input_buffer if newline was just pressed
+  ;calli is_newline_pressed
+  ;subi RG 1 RG                ; if is_newline_pressed() == 1, then loop_newline_pressed
+  ;bri zero loop_newline_pressed
   jpi loop_finally
 
 @label loop_newline_pressed
@@ -141,27 +142,6 @@
   stack_restore RA RB RC RD RE
   return
 
-
-@label is_newline_pressed
-  ; check if the last character in the input buffer is a newline
-  ; parameters:               none
-  ; returns:                  RG = 1 if newline is pressed, 0 otherwise
-  stack_stash RA RB
-  ldi 10 RB                   ; RB := newline character
-
-  ldi input_cursor_p RA       ; RA := data segment pointer
-  ldr RA RA                   ; RA := 0xE802
-  ldr RA RA                   ; RA := &char
-  ldr RA RA                   ; RA := char
-
-  ldi 1 RG                    ; RG := 1
-  sub RA RB RA                ; if RA == newline, then return RG = 1
-  bri zero is_newline_pressed_done
-  ldi 0 RG                    ; else return RG = 0
-@label is_newline_pressed_done
-  stack_restore RA RB
-  return
-
 @data row_index_mask ${64 - 1}
 
 @label keyboard_isr
@@ -170,14 +150,14 @@
   ldr RA RA               ; RA := Keyboard peripheral address deref
   ldr RA RA               ; RA := <16-bit keyboard character code> from MMIO register
 
+  ldi text_cursor_p RC
+  ldr RC RC
+  ldr RC RC               ; RC := text_cursor_p
+
   mov RA RB               ; RB := character code
   subi RB 5 RB            ; if code == 10 (enter key), then run newline handler
   subi RB 5 RB
   bri zero keyboard_isr_newline
-
-  ldi text_cursor_p RC
-  ldr RC RC
-  ldr RC RC               ; RC := text_cursor_p
 
   mov RA RB               ; if code == 8 (backspace key), then run backspace handler
   subi RB 5 RB
@@ -202,6 +182,24 @@
 
 @label keyboard_isr_newline
   m_newline RA RB
+
+  ; note: RC = text_cursor_p, set in the beginning of the ISR
+
+  ; BEGIN memcopy(last_line_p, input_buffer_p, input_buffer_size)
+  slri RC 6 RC             ; RC := RC >> 6, i.e. the row index
+  slli RC 6 RC             ; RC := RC << 6, i.e. index to the first character of the row
+  addi RC 3 RA            ; RA := RC + 3, i.e. index to the first character of the input string
+
+  ldi input_buffer_p RB
+  ldr RB RB               ; RB := &input_buffer_p
+  ldr RB RB               ; RB := input_buffer_p
+
+  ldi input_buffer_size RC
+  ldr RC RC               ; RC := input_buffer_size
+
+  ldi memcopy RD
+  callr RD
+  ; END
 
   ldi prompt_string RA
   calli put_string
