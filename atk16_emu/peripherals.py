@@ -72,6 +72,9 @@ class TPU:
     # address: 5 bits y, 6 bits x
     self.text_mem.write(addr, char & 0xFF)
 
+  def read_char(self, addr: int) -> int:
+    return self.text_mem.read(addr)
+
 class Graphics:
   def __init__(self):
     pygame.display.init()
@@ -111,6 +114,9 @@ class Graphics:
     # take only the lower 11 bits
     self.tpu.write_char(addr & 0x7FF, char)
 
+  def read(self, addr: int) -> int:
+    return self.tpu.read_char(addr & 0x7FF)
+
 class DummyGraphics:
   def __init__(self):
     pass
@@ -129,6 +135,10 @@ class DummyGraphics:
 
   def write(self, addr: int, char: int):
     pass
+
+  def read(self, addr: int) -> int:
+    print("warning: reading from dummy graphics")
+    return 0
 
 class Keyboard:
   def __init__(self, set_irq_line: Callable[[int], None]):

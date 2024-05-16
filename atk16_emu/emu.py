@@ -208,6 +208,8 @@ class Machine:
     else:
       if addr == 0xE7F1:
         return self.peripherals.keyboard.read()
+      elif 0xF800 <= addr <= 0xFFFF:
+        return self.peripherals.graphics.read(addr)
       else:
         return self.ram.read(addr & 0x7FFF)
 
@@ -453,9 +455,9 @@ class Machine:
       reg_hex = C.OKBLUE + f"0x{value:>04x}" + C.ENDC
       print(f"{reg_name.upper()}:     {reg_hex} ({value})")
 
-    for i in range(8):
-      ram_hex = C.OKBLUE + f"0x{self.ram.read(i):>04x}" + C.ENDC
-      print(f"RAM[{i}]: {ram_hex} ({self.ram.read(i)})")
+    # for i in range(8):
+    #   ram_hex = C.OKBLUE + f"0x{self.ram.read(i):>04x}" + C.ENDC
+    #   print(f"RAM[{i}]: {ram_hex} ({self.ram.read(i)})")
 
     def as_num(b: bool) -> str:
       return ((C.OKGREEN + "1") if b else (C.WARNING + "0")) + C.ENDC

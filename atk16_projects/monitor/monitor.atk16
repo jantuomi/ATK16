@@ -7,12 +7,12 @@
 
 ; Constants
 @data text_buffer_size    2048
-@data input_buffer_size   36 ; 40 chars row - 2 padding - 2 for prompt
+@data input_buffer_size   37 ; 1 word length +  40 chars row - 2 padding - 2 for prompt
 
 ; Global variable pointers
 ; 0xE800 - 0xEFFF: sprite buffer space that is unused in this program
 @data text_cursor_p       0xE800
-@data input_buffer_p      0xE801
+@data input_string_p      0xE801
 @data input_cursor_p      0xE802
 @data input_entered_bool  0xE803
 
@@ -33,15 +33,15 @@
   str RB RA
   ; END
 
-  ; BEGIN input_buffer_p = alloc(input_buffer_size)
+  ; BEGIN input_string_p = alloc(input_buffer_size)
   ldi input_buffer_size RA
   calli bump_alloc
-  ldi input_buffer_p RA
+  ldi input_string_p RA
   ldr RA RA
   str RG RA
   ; END
 
-  ; BEGIN input_cursor_p = input_buffer_p
+  ; BEGIN input_cursor_p = input_string_p
   ldi input_cursor_p RA
   ldr RA RA
   str RG RA
@@ -101,14 +101,15 @@
   ldi 0 RB                      ; else, run this branch and set input_entered_bool = 0
   str RB RA
 
-@data eval_output_string "command received!"
+@data eval_output_string "command received: "
   ldi eval_output_string RA
   calli put_string
 
-  ; ldi input_buffer_p RA   ; TODO!
-  ; ldr RA RA
-  ; ldr RA RA
-  ; calli put_string
+  ldi input_string_p RA
+  ldr RA RA
+  ldr RA RA
+
+  calli put_string
 
   m_newline RA RB
 
@@ -160,21 +161,26 @@
   jpi keyboard_isr_end
 
 @label keyboard_isr_newline
-  m_newline RA RB
-
   ; note: RC = text_cursor_p, set in the beginning of the ISR
 
-  ; BEGIN memcopy(last_line_p, input_buffer_p, input_buffer_size)
-  slri RC 6 RC             ; RC := RC >> 6, i.e. the row index
-  slli RC 6 RC             ; RC := RC << 6, i.e. index to the first character of the row
+  ldi row_index_mask RA
+  ldr RA RA
+  and RC RA RD            ; RD := RC & 63, i.e. the position on the row
+  subi RD 3 RD            ; RD = length of the command string
+
+  ldi input_string_p RB
+  ldr RB RB               ; RB := &input_string_p
+  ldr RB RB               ; RB := input_string_p
+  str RD RB               ; input_string_p length := RD (length of command string)
+
+  ; BEGIN memcopy(last_line_p, input_string_p, input_buffer_size)
+  slri RC 6 RC            ; RC := RC >> 6, i.e. the row index
+  slli RC 6 RC            ; RC := RC << 6, i.e. index to the first character of the row
   addi RC 3 RA            ; RA := RC + 3, i.e. index to the first character of the input string
 
-  ldi input_buffer_p RB
-  ldr RB RB               ; RB := &input_buffer_p
-  ldr RB RB               ; RB := input_buffer_p
+  addi RB 1 RB            ; RB := input_string_p + 1, i.e. index to the first character of the input string
 
-  ldi input_buffer_size RC
-  ldr RC RC               ; RC := input_buffer_size
+  mov RD RC
 
   ldi memcopy RD
   callr RD
@@ -186,6 +192,8 @@
   ldi 1 RB
   str RB RA
   ; END
+
+  m_newline RA RB
 
   ldi ${ord(" ")} RA
   m_put_char RA RB RD
