@@ -124,7 +124,7 @@ def expand_jpr(addr_reg: str) -> ExpandResult:
 @register_primitive
 def make_jpi(meta: Meta, symbols: Symbols, imm: int | str) -> int:
   """JPI 0110 XXXI IIII IIII"""
-  imm_e = eval_expr(symbols, str(imm), bits=9)
+  imm_e = eval_expr(symbols, str(imm), bits=16)
   imm_e = imm_e - meta.address - 1
 
   if imm_e < -(2 ** 8) or imm_e >= 2 ** 8:
@@ -157,8 +157,12 @@ def expand_brr(flag_s: str, addr_reg: str) -> ExpandResult:
 def make_bri(meta: Meta, symbols: Symbols, flag_s: str, imm: int | str) -> int:
   """BRI 1000 XFFI IIII IIII"""
   flag_s_e = eval_expr(symbols, flag_s, bits=2)
-  imm_e = eval_expr(symbols, str(imm), bits=9)
+  imm_e = eval_expr(symbols, str(imm), bits=16)
   imm_e = imm_e - meta.address - 1
+
+  if imm_e < -(2 ** 8) or imm_e >= 2 ** 8:
+    raise Exception(f"jpi imm value is not representable in 9 bits: {imm_e}")
+
   imm_e = imm_e & (0b111111111)
   word = (0b1000 << 12) + \
               (flag_s_e << 9) + \

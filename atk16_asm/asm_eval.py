@@ -27,10 +27,6 @@ constants: dict[str, str] = {
 
 Symbols = dict[str, int]
 
-def check_size(bits: int, val: int) -> None:
-  if val >= 2 ** bits:
-    raise Exception(f"Value does not fit in {bits} bits: 0x{val:>04x}")
-
 def eval_symbol(symbols: Symbols, c: str) -> str:
   if c in symbols:
     return str(symbols[c])
@@ -42,6 +38,9 @@ def eval_symbol(symbols: Symbols, c: str) -> str:
 
 def eval_expr(symbols: Symbols, expr: str, bits: int = 16) -> int:
   expr = eval_symbol(symbols, expr)
-  ret = eval(expr, symbols.copy()) # eval as Python expr
-  check_size(bits, ret)
-  return ret
+  val = eval(expr, symbols.copy()) # eval as Python expr
+
+  if val >= 2 ** bits:
+    raise Exception(f"When evaluating expression \"{expr}\":\nValue does not fit in {bits} bits: 0x{val:>04x}")
+
+  return val
