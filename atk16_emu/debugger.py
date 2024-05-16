@@ -264,6 +264,30 @@ class Debugger:
         self.history_cmpl_index += 1
         self.machine = self.history_buffer[len(self.history_buffer) - self.history_cmpl_index]
 
+      elif cmd == "m":
+        input_ = input(C.UNDERLINE + "Print memory address range (a..b):" + C.ENDC + " ")
+        if ".." not in input_:
+          range_ = [input_, input_]
+        else:
+          range_ = input_.split("..")
+
+        start = try_parse_num(range_[0])
+        end = try_parse_num(range_[1])
+
+        if start is None or end is None:
+          print("Invalid range")
+          continue
+
+        for addr in range(start, end + 1):
+          if addr < 0 or addr >= 64 * 2 ** 16:
+            continue
+
+          addr_prefix = C.OKGREEN + f"0x{addr:>04x}" + C.ENDC
+          word_infix = C.OKBLUE + f"0x{self.machine.mem_read(addr):>04x}" + C.ENDC
+          print(f"  {addr_prefix}: {word_infix}")
+
+        print()
+
       elif cmd == "B":
         print(C.UNDERLINE + "Active breakpoints:" + C.ENDC)
         self.print_breakpoints()
@@ -346,6 +370,7 @@ class Debugger:
     print("  b     step backward (if in time traveling mode)")
     print("  B     set or remove breakpoint")
     print("  s     show state summary")
+    print("  m     print memory range")
     print("  e     toggle inline symbol eval on current line")
     print("  0     reset machine state")
     print("  l     load ROM image and reset machine state")
