@@ -13,12 +13,12 @@
 ; 0xE800 - 0xEFFF: sprite buffer space that is unused in this program
 @data text_cursor_p       0xE800
 @data input_string_p      0xE801
-@data input_cursor_p      0xE802
-@data input_entered_bool  0xE803
+@data input_entered_bool  0xE802
 
 @data title_string    " »» ATK16 monitor v0.1 »»"
 @data subtitle_string " Run [help] for a list of commands"
 @data prompt_string   " > "
+@data help_cmd_string "help"
 
 @label main
   ; initialize heap allocator
@@ -37,12 +37,6 @@
   ldi input_buffer_size RA
   calli bump_alloc
   ldi input_string_p RA
-  ldr RA RA
-  str RG RA
-  ; END
-
-  ; BEGIN input_cursor_p = input_string_p
-  ldi input_cursor_p RA
   ldr RA RA
   str RG RA
   ; END
@@ -80,8 +74,15 @@
   calli put_string
   ; END
 
-  m_newline RA RB
-  m_newline RA RB
+  ; BEGIN print two newlines
+  ldi text_cursor_p RA
+  ldr RA RA
+  ldr RA RB
+  slri RB 6 RB
+  addi RB 2 RB
+  slli RB 6 RB
+  str RB RA
+  ; END
 
   ldi prompt_string RA
   calli put_string
@@ -101,7 +102,17 @@
   ldi 0 RB                      ; else, run this branch and set input_entered_bool = 0
   str RB RA
 
-@data eval_output_string "command received: "
+  ldi help_cmd_string RA
+  ldi input_string_p RB
+  ldr RB RB
+  ldr RB RB
+
+  calli string_compare
+  subi RG 1 RG
+  bri zero loop_input_cmd_help
+
+@label loop_input_not_recognized
+@data eval_output_string "Unknown command: "
   ldi eval_output_string RA
   calli put_string
 
@@ -109,12 +120,26 @@
   ldr RA RA
   ldr RA RA
 
-  calli put_string
+@data put_string_p put_string
+  ldi put_string_p RB
+  ldr RB RB
+  callr RB
+  jpi loop_input_print_newline
 
+@label loop_input_cmd_help
+@data help_cmd_output_0 "Available commands:\n  help    display this help message"
+  ldi help_cmd_output_0 RA
+  ldi put_string_p RB
+  ldr RB RB
+  callr RB
+
+@label loop_input_print_newline
   m_newline RA RB
 
   ldi prompt_string RA
-  calli put_string
+  ldi put_string_p RB
+  ldr RB RB
+  callr RB
 
 @label loop_finally
   m_clear_critical RA RB
@@ -142,7 +167,9 @@
   subi RB 5 RB
   subi RB 3 RB
 
-  ldi keyboard_isr_backspace RD
+@data keyboard_isr_backspace_p keyboard_isr_backspace
+  ldi keyboard_isr_backspace_p RD
+  ldr RD RD
   brr zero RD
 
   ldi row_index_mask RD   ; else code is not special; write it to text buffer
@@ -257,8 +284,17 @@
   bri zero put_string_done    ; i.e. no more characters to put
 
   ldr RC RA                   ; RA := character to put
-  m_put_char RA RD RE         ; inline the put_char subroutine to avoid function call overhead
+  subi RA 5 RD
+  subi RD 5 RD
+  bri zero put_string_newline
 
+  m_put_char RA RD RE         ; inline the put_char subroutine to avoid function call overhead
+  jpi put_string_continue
+
+@label put_string_newline
+  m_newline RD RE
+
+@label put_string_continue
   inc RC
   subi RB 1 RB
   jpi put_string_loop

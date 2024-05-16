@@ -41,3 +41,65 @@
 @label memcopy_done
   stack_restore RD RE RF
   return
+
+@label memcompare
+  ; compares two blocks of memory
+  ; parameters:             RA = src1 (source address 1)
+  ;                         RB = src2 (source address 2)
+  ;                         RC = n (number of words to compare)
+  ; returns:                RG = 1 if the blocks are equal, 0 otherwise
+  stack_stash RA RB RC RD RE
+  ldi 0 RG                  ; RD := 0 (result)
+
+@label memcompare_loop
+  subi RC 0 RC
+  bri zero memcompare_result_equal   ; exit the loop
+
+  ldr RA RD                 ; RD := left value
+  ldr RB RE                 ; RE := right value
+
+  sub RD RE RD              ; RD := left - right
+  bri zero memcompare_continue      ; if left == right, continue the loop
+
+  jpi memcompare_end        ; if left != right, exit the loop
+
+@label memcompare_continue
+  inc RA                    ; RA := RA + 1
+  inc RB                    ; RB := RB + 1
+  dec RC                    ; RC := RC - 1
+  jpi memcompare_loop       ; repeat the loop
+
+@label memcompare_result_equal
+  ldi 1 RG                  ; RG := 1 (result)
+
+@label memcompare_end
+  stack_restore RA RB RC RD RE
+  return
+
+
+@label string_compare
+  ; compares two strings
+  ; parameters:             RA = str1 (source address 1)
+  ;                         RB = str2 (source address 2)
+  ; returns:                RG = 1 if the strings are equal, 0 otherwise
+
+  stack_stash RA RB RC RD RE
+  ldi 0 RG                  ; RD := 0 (result)
+
+  ldr RA RD                 ; RD := left string length
+  ldr RB RE                 ; RE := right string length
+
+  sub RD RE RD              ; RD := left length - right length
+  bri zero string_compare_same_length      ; if equal length, use memcompare
+
+  jpi string_compare_end    ; else if different length, exit
+
+@label string_compare_same_length
+  inc RA
+  inc RB
+  mov RE RC
+  calli memcompare          ; return value implicitly returned in RG
+
+@label string_compare_end
+  stack_restore RA RB RC RD RE
+  return
