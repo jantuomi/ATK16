@@ -16,10 +16,11 @@
 @data input_string_p      0xE801
 @data input_entered_bool  0xE802
 
-@data title_string    " »» ATK16 monitor v0.1 »»"
-@data subtitle_string " Run [help] for a list of commands"
-@data prompt_string   " > "
-@data help_cmd_string "help"
+@data title_string     " »» ATK16 monitor v0.1 »»"
+@data subtitle_string  " Run [help] for a list of commands"
+@data prompt_string    " > "
+@data help_cmd_string  "help"
+@data clear_cmd_string "clear"
 
 @label main
   ; initialize heap allocator
@@ -112,10 +113,15 @@
   subi RG 1 RG
   bri zero loop_input_cmd_help
 
+  ldi clear_cmd_string RA
+  call string_compare
+  subi RG 1 RG
+  bri zero loop_input_cmd_clear
+
 @label loop_input_not_recognized
 @data eval_output_string "Unknown command: "
   ldi eval_output_string RA
-  calli put_string
+  call put_string
 
   ldi input_string_p RA
   ldr RA RA
@@ -127,11 +133,41 @@
   jpi loop_input_print_newline
 
 @label loop_input_cmd_help
-@data help_cmd_output_0 "Available commands:\n  help    display this help message"
+@data help_cmd_output_0 "Available commands:\n  help    display this help message\n  clear   clear the text area"
   ldi help_cmd_output_0 RA
   ldi put_string_p RB
   ldr RB RB
   callr RB
+  jpi loop_input_print_newline
+
+@label loop_input_cmd_clear
+; BEGIN memset(first_line_p, 24 * 64, 0)
+  ldi second_line_idx RB
+  ldr RB RB                   ; RB := second line index
+  subi RB 1 RD                ; RD := first line index
+
+  ldi vt_text_mem RC
+  ldr RC RC                   ; RC := text_mem address (0xF800)
+  slli RD 6 RD                ; RD := first line index * 64
+  add RD RC RA                ; RD := pointer to the first line start in the 0xF800-0xFFFF range
+
+@data loop_input_cmd_clear_memset_length ${24 * 64}
+  ldi loop_input_cmd_clear_memset_length RB
+  ldr RB RB
+  ldi 0 RC
+
+  call memset
+
+  ldi text_cursor_p RB
+  ldr RB RB
+
+  ldi 1 RC
+  slli RC 6 RC
+  sub RA RC RA
+  str RA RB
+
+  ; END
+  jpi loop_input_print_newline
 
 @label loop_input_print_newline
   call newline
