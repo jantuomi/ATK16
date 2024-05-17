@@ -1,3 +1,4 @@
+@data log_term_char_p log_term_char
 @label log_term_char
   ; send a character to the terminal
   ; parameters:             RA = character code
@@ -11,7 +12,7 @@
   return
 
 
-
+@data log_term_string_p log_term_string
 @label log_term_string
   ; send a string to the terminal
   ; parameters:             RA = address of string allocation

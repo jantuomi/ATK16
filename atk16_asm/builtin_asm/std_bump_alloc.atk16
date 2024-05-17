@@ -24,6 +24,7 @@
 @data bump_next_p heap_segment
 @data bump_arena_start ${heap_segment - 1}
 
+@data bump_reset_p bump_reset
 @label bump_reset
   ; reset the heap to its initial state (zero allocated blocks)
   ; can be used to initialize the bump allocator
@@ -42,6 +43,7 @@
   stack_restore RA RB
   return
 
+@data bump_alloc_p bump_alloc
 @label bump_alloc
   ; allocate a block of memory from the heap, checking for overlap with the stack
   ; parameters:               RA = n of words to allocate

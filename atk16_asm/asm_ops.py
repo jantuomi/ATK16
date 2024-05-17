@@ -346,6 +346,16 @@ def expand_calli(addr_imm: int | str) -> ExpandResult:
   ]
 
 @register_macro
+def expand_call(label: str, clobber_r = "RF") -> ExpandResult:
+  """Convenience wrapper for ldi + ldr + callr, clobbers RF by default."""
+  pointer_label = f"{label}_p"
+  return [
+    ["ldi", pointer_label, clobber_r],
+    ["ldr", clobber_r, clobber_r],
+    *expand_callr(clobber_r),
+  ]
+
+@register_macro
 def expand_return() -> ExpandResult:
   return [
     ["str", "RG", "SP"], # store returned value on stack but don't increment SP

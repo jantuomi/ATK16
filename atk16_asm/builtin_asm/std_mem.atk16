@@ -1,3 +1,4 @@
+@data memset_p memset
 @label memset
   ; sets a specified number of words in memory to a specified value
   ; parameters:             RA = offset (offset in memory to start at)
@@ -19,6 +20,7 @@
   stack_restore RD RE
   return
 
+@data memcopy_p memcopy
 @label memcopy
   ; copies a specified number of words from one location in memory to another
   ; parameters:             RA = src (source address)
@@ -42,6 +44,7 @@
   stack_restore RD RE RF
   return
 
+@data memcompare_p memcompare
 @label memcompare
   ; compares two blocks of memory
   ; parameters:             RA = src1 (source address 1)
@@ -77,6 +80,7 @@
   return
 
 
+@data string_compare_p string_compare
 @label string_compare
   ; compares two strings
   ; parameters:             RA = str1 (source address 1)

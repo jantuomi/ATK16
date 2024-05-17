@@ -2,7 +2,6 @@
 
 @include %bootstrap
 @include %std_mem
-@include %std_term
 @include %std_bump_alloc
 
 ; Constants
@@ -64,7 +63,8 @@
 
   ; BEGIN put_string(title_string)
   ldi title_string RA
-  calli put_string
+@label debug
+  call put_string
   ; END
 
   m_newline RA RB
@@ -120,7 +120,6 @@
   ldr RA RA
   ldr RA RA
 
-@data put_string_p put_string
   ldi put_string_p RB
   ldr RB RB
   callr RB
@@ -251,6 +250,7 @@
 
 ;;; Subroutines
 
+@data newline_p newline
 @label newline
   ; move cursor to the beginning of the next line
   ; parameters:               none
@@ -261,6 +261,7 @@
   stack_restore RA RB
   return
 
+@data put_char_p put_char
 @label put_char
   ; put a character at the current cursor position
   ; parameters:               RA = character to put
@@ -271,6 +272,7 @@
   stack_restore RB RC
   return
 
+@data put_string_p put_string
 @label put_string
   ; put a string at the current cursor position
   ; parameters:               RA = string_p

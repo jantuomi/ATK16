@@ -1,6 +1,7 @@
 @data mul_sign_mask ${2 ** 15}
 @data mul_not_mask 0xFFFF
 
+@data mul_p mul
 @label mul
   ; multiply a signed (a) and a signed (b)
   ; parameters RA = a
@@ -71,6 +72,7 @@
 ; Calling convention is that arguments are in registers RA..RG (max 7 arguments since RH = SP)
 ; and the return value is in RG (note: overwriting arg in RG)
 
+@data fact_p fact
 @label fact
   ; parameters RA = n
   ; return     RG = factorial(n)
