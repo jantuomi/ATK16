@@ -1,5 +1,5 @@
 import pygame
-import sys
+from sys import stdout
 import os
 import random
 from .memory import RAM, ROM
@@ -8,18 +8,19 @@ from typing import Callable
 IRQ_LINE_KEYBOARD = 0
 
 class Peripherals:
-  def __init__(self, set_irq_line: Callable[[int], None]):
+  def __init__(self, set_irq_line: Callable[[int], None], request_quit: Callable[[], None]):
     pygame.init()
     self.graphics = Graphics()
     self.keyboard = Keyboard(set_irq_line=set_irq_line)
     self.terminal = Terminal()
 
+    self.request_quit = request_quit
     self.set_irq_line = set_irq_line
 
   def step(self):
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
-          sys.exit(0)
+        self.request_quit()
       elif event.type == pygame.KEYDOWN:
         self.keyboard.set_key_down(event.key)
       elif event.type == pygame.KEYUP:
@@ -242,4 +243,4 @@ class Terminal:
 
   def write(self, s: int):
     print(chr(s), end="")
-    sys.stdout.flush()
+    stdout.flush()

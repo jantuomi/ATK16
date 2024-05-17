@@ -57,6 +57,7 @@ def main():
     print("===============")
 
     machine.print_state_summary()
+    machine.print_hotspot_summary()
 
   else:
     debugger = Debugger(options.peripherals_enabled)

@@ -3,6 +3,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 import sys
 from dataclasses import dataclass
+import heapq
 
 from .opcodes import *
 from .memory import *
@@ -103,6 +104,12 @@ class ALU:
 
     raise ValueError(f"Invalid ALU S: {S}")
 
+@dataclass
+class HotspotSpan:
+  from_addr: int
+  to_addr: int
+  count: int
+
 class Machine:
   def __init__(self, peripherals_enabled: bool = False):
     self.rom = ROM(15, 16)
@@ -136,9 +143,21 @@ class Machine:
 
     self.peripherals_enabled = peripherals_enabled
     if peripherals_enabled:
-      self.peripherals = Peripherals(set_irq_line=self.set_irq_line)
+      self.peripherals = Peripherals(set_irq_line=self.set_irq_line,
+                                     request_quit=self.shutdown)
     else:
       self.peripherals = DummyPeripherals()
+
+    self.hotspot_table: dict[int, int] = {}
+
+  def shutdown(self):
+    self.running = False
+
+  def record_hotspot(self, addr: int):
+    if addr not in self.hotspot_table:
+      self.hotspot_table[addr] = 0
+
+    self.hotspot_table[addr] += 1
 
   def make_copy(self):
     new_machine = Machine()
@@ -304,6 +323,7 @@ class Machine:
       self.is_critical_section = True
 
     pc_addr = self.pc.value
+    self.record_hotspot(pc_addr)
     self.pc.step()
 
     instr = self.mem_read(pc_addr)
@@ -466,5 +486,31 @@ class Machine:
           f"O: {as_num(self.fr.overflow)}, "
           f"Z: {as_num(self.fr.zero)}, "
           f"S: {as_num(self.fr.sign)}")
+
+    print()
+
+  def print_hotspot_summary(self):
+    # show the top 10 most executed instructions using self.hotspot_table
+    N = 100
+    counts = heapq.nlargest(N, self.hotspot_table.items(), key=lambda item: item[1])
+
+    print("Hotspot analysis summary:")
+    current_span: HotspotSpan | None = None
+    for addr, count in counts:
+      if current_span is None:
+        current_span = HotspotSpan(from_addr=addr,
+                                   to_addr=addr,
+                                   count=count)
+      elif addr == current_span.to_addr + 1:
+        current_span.to_addr = addr
+        current_span.count += count
+      else:
+        print(C.OKGREEN + f"0x{current_span.from_addr:>04x}..0x{current_span.to_addr:>04x}" + C.ENDC + f"   {count}")
+        current_span = HotspotSpan(from_addr=addr,
+                                   to_addr=addr,
+                                   count=count)
+
+    if current_span is not None:
+      print(C.OKGREEN + f"0x{current_span.from_addr:>04x}..0x{current_span.to_addr:>04x}" + C.ENDC + f"   {count}")
 
     print()
