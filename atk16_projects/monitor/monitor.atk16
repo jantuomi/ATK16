@@ -7,6 +7,8 @@
 ; Constants
 @data text_buffer_size    2048
 @data input_buffer_size   37 ; 1 word length +  40 chars row - 2 padding - 2 for prompt
+@data second_line_idx     5
+@data last_line_idx       28
 
 ; Global variable pointers
 ; 0xE800 - 0xEFFF: sprite buffer space that is unused in this program
@@ -63,7 +65,6 @@
 
   ; BEGIN put_string(title_string)
   ldi title_string RA
-@label debug
   call put_string
   ; END
 
@@ -71,7 +72,7 @@
 
   ; BEGIN put_string(subtitle_string)
   ldi subtitle_string RA
-  calli put_string
+  call put_string
   ; END
 
   ; BEGIN print two newlines
@@ -85,7 +86,7 @@
   ; END
 
   ldi prompt_string RA
-  calli put_string
+  call put_string
 
 ; loop forever
 @label loop
@@ -133,7 +134,7 @@
   callr RB
 
 @label loop_input_print_newline
-  m_newline RA RB
+  call newline
 
   ldi prompt_string RA
   ldi put_string_p RB
@@ -219,7 +220,7 @@
   str RB RA
   ; END
 
-  m_newline RA RB
+  call newline
 
   ldi ${ord(" ")} RA
   m_put_char RA RB RD
@@ -256,9 +257,71 @@
   ; parameters:               none
   ; returns:                  none
 
-  stack_stash RA RB
+  stack_stash RA RB RC RD
+
+  ; check if the cursor is at the last line
+  ldi text_cursor_p RA
+  ldr RA RA                   ; RA := &text_cursor_p
+  ldr RA RB                   ; RB := text_cursor_p
+
+  ldi vt_text_mem RC
+  ldr RC RC                   ; RC := text_mem address (0xF800)
+  sub RB RC RB                ; RB := difference from start of text_mem
+  slri RB 6 RB                ; RB := RB >> 6, i.e. the row index
+
+  ldi last_line_idx RC
+  ldr RC RC                   ; RC := last_line_idx
+
+  sub RB RC RC
+  bri zero newline_at_last_line ; if row index == last_line_idx, go to newline_at_last_line
+
   m_newline RA RB
-  stack_restore RA RB
+  jpi newline_end
+
+@label newline_at_last_line
+  ldi second_line_idx RB
+  ldr RB RB                   ; RB := second line index
+  subi RB 1 RD                ; RD := first line index
+
+  slli RB 6 RB                ; RB ;= second line index * 64
+  ldi vt_text_mem RC
+  ldr RC RC                   ; RC := text_mem address (0xF800)
+  add RB RC RB                ; RB := pointer to the second line start in the 0xF800-0xFFFF range
+
+  slli RD 6 RD                ; RD := first line index * 64
+  add RD RC RD                ; RD := pointer to the first line start in the 0xF800-0xFFFF range
+
+  ; BEGIN memcopy(second_line_p, first_line_p, 24 * 64)
+@data newline_memcopy_length ${24 * 64}
+  mov RB RA
+  mov RD RB
+  mov RC RD                   ; preserve text_mem address in RD
+  ldi newline_memcopy_length RC
+  ldr RC RC
+
+  call memcopy
+  ; END
+
+  ; BEGIN memset(last_line_p, 0, 64)
+  ldi last_line_idx RA
+  ldr RA RA
+  slli RA 6 RA
+  add RA RD RA                ; pointer to last row in text mem
+
+  ldi 1 RB
+  slli RB 6 RB                ; RB := 64
+
+  ldi 0 RC
+
+  call memset
+
+  ldi text_cursor_p RB        ; set text_cursor_p to beginning of last line
+  ldr RB RB
+  str RA RB
+  ; END
+
+@label newline_end
+  stack_restore RA RB RC RD
   return
 
 @data put_char_p put_char
@@ -294,7 +357,7 @@
   jpi put_string_continue
 
 @label put_string_newline
-  m_newline RD RE
+  call newline
 
 @label put_string_continue
   inc RC
@@ -303,6 +366,9 @@
 @label put_string_done
   stack_restore RA RB RC RD RE
   return
+
+;; Install the ISR
+;; note: clobbers current ROM address, best to keep at the end of the source
 
 @address vt_ISR0
 @begin_override
