@@ -1,0 +1,6 @@
+*.dblite
+*.out
+*.vcd
+hardware.bin
+hardware.json
+hardware.asc
