@@ -1,6 +1,9 @@
 *.dblite
 *.out
 *.vcd
+*.rpt
+*.svg
+*.dot
 hardware.bin
 hardware.json
 hardware.asc

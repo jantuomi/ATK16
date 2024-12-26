@@ -1,0 +1,32 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Thu Dec 26 11:58:12 2024
+[*]
+[dumpfile] "/Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/mem_fsm_tb.vcd"
+[dumpfile_mtime] "Thu Dec 26 11:57:15 2024"
+[dumpfile_size] 1302
+[savefile] "/Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/mem_fsm_tb.gtkw"
+[timestart] 0
+[size] 1280 600
+[pos] -1 -1
+*-16.373917 -1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[treeopen] mem_fsm_tb.
+[treeopen] mem_fsm_tb.dut.
+[sst_width] 240
+[signals_width] 144
+[sst_expanded] 1
+[sst_vpaned_height] 159
+@28
+mem_fsm_tb.clk
+mem_fsm_tb.start_read
+mem_fsm_tb.start_write
+@22
+mem_fsm_tb.addr[15:0]
+mem_fsm_tb.data_in[15:0]
+mem_fsm_tb.data_out[15:0]
+@28
+mem_fsm_tb.done
+@29
+mem_fsm_tb.dut.state[2:0]
+[pattern_trace] 1
+[pattern_trace] 0

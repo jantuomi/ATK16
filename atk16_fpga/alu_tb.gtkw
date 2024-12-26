@@ -1,0 +1,54 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Tue Dec 24 12:08:19 2024
+[*]
+[dumpfile] "/Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/alu_tb.vcd"
+[dumpfile_mtime] "Tue Dec 24 11:56:07 2024"
+[dumpfile_size] 1623
+[savefile] "/Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/alu_tb.gtkw"
+[timestart] 0
+[size] 1280 600
+[pos] -1 -1
+*-17.259954 120300 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[markername] AA
+[markername] BB
+[markername] CC
+[markername] DD
+[markername] EE
+[markername] FF
+[markername] GG
+[markername] HH
+[markername] II
+[markername] JJ
+[markername] KK
+[markername] LL
+[markername] MM
+[markername] NN
+[markername] OO
+[markername] PP
+[markername] QQ
+[markername] RR
+[markername] SS
+[markername] TT
+[markername] UU
+[markername] VV
+[markername] WW
+[markername] XX
+[markername] YY
+[markername] ZZ
+[treeopen] alu_tb.
+[sst_width] 240
+[signals_width] 170
+[sst_expanded] 1
+[sst_vpaned_height] 159
+@2025
+^1 /Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/alu_gtkw_translate_sel.txt
+alu_tb.dut.sel[2:0]
+@420
+alu_tb.dut.a[15:0]
+alu_tb.dut.b[15:0]
+alu_tb.dut.result[15:0]
+@28
+alu_tb.dut.flags[3:0]
+[pattern_trace] 1
+[pattern_trace] 0

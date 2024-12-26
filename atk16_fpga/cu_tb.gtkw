@@ -1,0 +1,77 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Thu Dec 26 10:23:44 2024
+[*]
+[dumpfile] "/Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/cu_tb.vcd"
+[dumpfile_mtime] "Thu Dec 26 10:23:28 2024"
+[dumpfile_size] 3558
+[savefile] "/Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/cu_tb.gtkw"
+[timestart] 0
+[size] 1728 1051
+[pos] -1 -1
+*-18.634130 214600 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[markername] AA
+[markername] BB
+[markername] CC
+[markername] DD
+[markername] EE
+[markername] FF
+[markername] GG
+[markername] HH
+[markername] II
+[markername] JJ
+[markername] KK
+[markername] LL
+[markername] MM
+[markername] NN
+[markername] OO
+[markername] PP
+[markername] QQ
+[markername] RR
+[markername] SS
+[markername] TT
+[markername] UU
+[markername] VV
+[markername] WW
+[markername] XX
+[markername] YY
+[markername] ZZ
+[treeopen] cu_tb.
+[treeopen] cu_tb.dut.
+[sst_width] 240
+[signals_width] 325
+[sst_expanded] 1
+[sst_vpaned_height] 317
+@28
+cu_tb.dut.clk
+cu_tb.dut.rst
+@25
+cu_tb.dut.phase[2:0]
+@22
+cu_tb.dut.pc[15:0]
+@28
+cu_tb.dut.ir[15:0]
+@420
+cu_tb.dut.alu_a[15:0]
+cu_tb.dut.alu_b[15:0]
+cu_tb.dut.alu_sel[2:0]
+cu_tb.dut.alu_result[15:0]
+@28
+cu_tb.dut.alu_flags[3:0]
+@22
+cu_tb.dut.ra[15:0]
+cu_tb.dut.rb[15:0]
+cu_tb.dut.rc[15:0]
+cu_tb.dut.rd[15:0]
+cu_tb.dut.re[15:0]
+cu_tb.dut.rf[15:0]
+cu_tb.dut.rg[15:0]
+cu_tb.dut.rh[15:0]
+cu_tb.dut.bram_addr[15:0]
+cu_tb.dut.bram_data_in[15:0]
+cu_tb.dut.bram_data_out[15:0]
+@28
+cu_tb.dut.bram_rd
+cu_tb.dut.bram_wr
+[pattern_trace] 1
+[pattern_trace] 0
