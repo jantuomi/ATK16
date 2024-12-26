@@ -4,7 +4,7 @@
 
 module mem_fsm_tb();
 
-    reg clk, rst, start_read, start_write;
+    reg clk, rst, read_en, write_en;
     reg [15:0] addr, data_in;
     wire done;
     wire [15:0] data_out;
@@ -13,8 +13,8 @@ module mem_fsm_tb();
         .clk(clk),
         .addr(addr),
         .data_in(data_in),
-        .start_read(start_read),
-        .start_write(start_write),
+        .read_en(read_en),
+        .write_en(write_en),
         .data_out(data_out),
         .done(done)
     );
@@ -30,17 +30,18 @@ module mem_fsm_tb();
 
         clk = 0;
         rst = 0;
-        start_read = 0;
-        start_write = 0;
+        read_en = 0;
+        write_en = 0;
         #10
 
         // test read
         dut.bram_inst.mem[0] = 16'hffff;
         addr = 16'd0;
-        start_read = 1;
-        start_write = 0;
+        read_en = 1;
+        write_en = 0;
 
-        #40
+        while (!done) #10;
+
         if (data_out == 16'hffff && done == 1) begin
             $display("\033[0;32m[PASS]\033[0m Read: data is available and done is 1 as expected");
         end else begin
@@ -48,17 +49,18 @@ module mem_fsm_tb();
             failed = 1;
         end
 
-        start_read = 0;
-        start_write = 0;
+        read_en = 0;
+        write_en = 0;
         #10
 
         // test write
         addr = 16'd1;
         data_in = 16'hffff;
-        start_read = 0;
-        start_write = 1;
+        read_en = 0;
+        write_en = 1;
 
-        #40
+        while (!done) #10;
+
         if (dut.bram_inst.mem[1] == 16'hffff && done == 1) begin
             $display("\033[0;32m[PASS]\033[0m Write: data is available and done is 1 as expected");
         end else begin
@@ -66,8 +68,8 @@ module mem_fsm_tb();
             failed = 1;
         end
 
-        start_read = 0;
-        start_write = 0;
+        read_en = 0;
+        write_en = 0;
 
         #5
         if (failed) begin
