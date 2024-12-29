@@ -4,7 +4,7 @@
 `define ST_READ   3'd1
 `define ST_WRITE  3'd2
 
-module mem_fsm(
+module bram_fsm(
     input clk,
     input [15:0] addr,
     input [15:0] data_in,

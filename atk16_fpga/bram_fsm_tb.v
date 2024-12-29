@@ -2,14 +2,14 @@
 `define DUMPSTR(x) `"x.vcd`"
 `timescale 10 ns / 100 ps
 
-module mem_fsm_tb();
+module bram_fsm_tb();
 
     reg clk, rst, read_en, write_en;
     reg [15:0] addr, data_in;
     wire done;
     wire [15:0] data_out;
 
-    mem_fsm dut(
+    bram_fsm dut(
         .clk(clk),
         .addr(addr),
         .data_in(data_in),
@@ -26,7 +26,7 @@ module mem_fsm_tb();
     initial begin
         failed = 0;
         $dumpfile(`DUMPSTR(`VCD_OUTPUT));
-        $dumpvars(0, mem_fsm_tb);
+        $dumpvars(0, bram_fsm_tb);
 
         clk = 0;
         rst = 0;

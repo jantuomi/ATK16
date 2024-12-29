@@ -89,7 +89,7 @@ module cu(
     reg  mem_read_en, mem_write_en;
     wire mem_done;
     wire [15:0] mem_data_out;
-    mem_fsm mem_fsm_inst(
+    bram_fsm bram_fsm_inst(
         .clk(clk),
         .addr(mem_addr),
         .data_in(mem_data_in),
