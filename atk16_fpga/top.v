@@ -23,6 +23,7 @@ module top(
         .sram_out(SD)
     );
 
+    assign SA[17:16] = 2'b0;
     assign LED1 = BUT1;
 
 endmodule
