@@ -15,46 +15,19 @@ module sram(
     input wire [15:0] data_in,
     output reg [15:0] data_out
 );
-
     reg [15:0] mem [0:262143];  // 256K x 16 memory
-    reg [17:0] last_addr = -1;
-    reg [15:0] last_data_in = -1;
-    reg last_wr_n, last_rd_n, last_cs_n = 0;
-    reg trigger = 0;
 
-    always @(posedge trigger) begin
-        if (cs_n == 1'b0) begin
-            if (wr_n == 1'b0) begin
-                mem[addr] = 16'hx;
-                //$display("wrote %04h at time %0d ns", mem[addr], $time);
-                #7 mem[addr] = data_in;
-                //$display("wrote %04h at time %0d ns", mem[addr], $time);
-            end
-            if (rd_n == 1'b0) begin
-                data_out = 16'hx;
-                //$display("read %04h at time %0d ns", data_out, $time);
-                #7 data_out = mem[addr];
-                //$display("read %04h at time %0d ns", data_out, $time);
-            end
+    always @(cs_n or wr_n or rd_n or addr or data_in) begin
+        if (cs_n == 1'b1) begin
+            data_out <= #3 16'hx;
+        end
+        if (cs_n == 1'b0 && wr_n == 1'b0) begin
+            mem[addr] <= #3 16'hx;
+            mem[addr] <= #7 data_in;
+        end
+        if (cs_n == 1'b0 && rd_n == 1'b0) begin
+            data_out <= #3 16'hx;
+            data_out <= #7 mem[addr];
         end
     end
-
-    always @(*) begin
-        if (addr !== last_addr ||
-            data_in !== last_data_in ||
-            wr_n !== last_wr_n ||
-            rd_n !== last_rd_n ||
-            cs_n !== last_cs_n
-        ) begin
-            //$display("SRAM: addr=%h data_in=%h", addr, data_in);
-            last_addr = addr;
-            last_data_in = data_in;
-            last_wr_n = wr_n;
-            last_rd_n = rd_n;
-            last_cs_n = cs_n;
-            trigger = 0;
-            #3 trigger = 1;
-        end
-    end
-
 endmodule
