@@ -40,11 +40,11 @@ module sram(
     end
 
     always @(*) begin
-        if (addr != last_addr ||
-            data_in != last_data_in ||
-            wr_n != last_wr_n ||
-            rd_n != last_rd_n ||
-            cs_n != last_cs_n
+        if (addr !== last_addr ||
+            data_in !== last_data_in ||
+            wr_n !== last_wr_n ||
+            rd_n !== last_rd_n ||
+            cs_n !== last_cs_n
         ) begin
             //$display("SRAM: addr=%h data_in=%h", addr, data_in);
             last_addr = addr;

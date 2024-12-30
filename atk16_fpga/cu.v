@@ -67,11 +67,6 @@ module cu(
     input wire rst,
     input wire [3:0] int_lines
 );
-    reg  [2:0]  alu_sel;
-    reg  [15:0] alu_a;
-    reg  [15:0] alu_b;
-    wire [15:0] alu_result;
-    wire [3:0]  alu_flags;
     reg  [15:0] regbank [0:7];
     reg  [15:0] decoded_tmp;
     reg  [2:0]  phase = `PH_RESET;
@@ -87,18 +82,22 @@ module cu(
     reg  [15:0] mem_addr;
     reg  [15:0] mem_data_in;
     reg  mem_read_en, mem_write_en;
-    wire mem_done;
     wire [15:0] mem_data_out;
-    bram_fsm bram_fsm_inst(
-        .clk(clk),
-        .addr(mem_addr),
+    reg  mem_waiting = 0;
+    sram sram_inst(
+        .cs_n(1'd0),
+        .wr_n(~mem_write_en),
+        .rd_n(~mem_read_en),
+        .addr({ 2'd0, mem_addr }),
         .data_in(mem_data_in),
-        .read_en(mem_read_en),
-        .write_en(mem_write_en),
-        .data_out(mem_data_out),
-        .done(mem_done)
+        .data_out(mem_data_out)
     );
 
+    reg  [2:0]  alu_sel;
+    reg  [15:0] alu_a;
+    reg  [15:0] alu_b;
+    wire [15:0] alu_result;
+    wire [3:0]  alu_flags;
     alu alu_inst(
         .sel(alu_sel),
         .a(alu_a),
@@ -172,14 +171,16 @@ module cu(
 
         // Fetch stage
         else if (phase == `PH_FETCH) begin
-            mem_read_en  <= 1;
-            mem_addr     <= pc;
-
-            if (mem_done) begin
+            if (~mem_waiting) begin
+                mem_read_en  <= 1;
+                mem_addr     <= pc;
+                mem_waiting  <= 1;
+            end else begin
                 mem_read_en  <= 0;
                 ir           <= mem_data_out;
                 phase        <= `PH_DECODE;
                 pc           <= pc + 16'd1;
+                mem_waiting  <= 0;
             end
         end
 
@@ -211,23 +212,27 @@ module cu(
                         phase <= `PH_EXECUTE;
                     end
                     else if (ir[1] == 1 && ir[0] == 0) begin  // addressing mode: absolute, indirect
-                        mem_read_en    <= 1;
-                        mem_addr       <= regbank[ir[8:6]];
-
-                        if (mem_done) begin
-                            decoded_tmp       <= mem_data_out;
-                            mem_read_en       <= 0;
-                            phase             <= `PH_EXECUTE;
+                        if (~mem_waiting) begin
+                            mem_read_en    <= 1;
+                            mem_addr       <= regbank[ir[8:6]];
+                            mem_waiting    <= 1;
+                        end else begin
+                            decoded_tmp    <= mem_data_out;
+                            mem_read_en    <= 0;
+                            phase          <= `PH_EXECUTE;
+                            mem_waiting    <= 0;
                         end
                     end
                     else if (ir[1] == 0 && ir[0] == 0) begin // addressing mode: pc relative, indirect
-                        mem_read_en    <= 1;
-                        mem_addr       <= pc + regbank[ir[8:6]] - 1;
-
-                        if (mem_done) begin
-                            decoded_tmp       <= mem_data_out;
-                            mem_read_en       <= 0;
-                            phase             <= `PH_EXECUTE;
+                        if (~mem_waiting) begin
+                            mem_read_en    <= 1;
+                            mem_addr       <= pc + regbank[ir[8:6]] - 1;
+                            mem_waiting    <= 1;
+                        end else begin
+                            decoded_tmp    <= mem_data_out;
+                            mem_read_en    <= 0;
+                            phase          <= `PH_EXECUTE;
+                            mem_waiting    <= 0;
                         end
                     end
                 end
@@ -246,23 +251,27 @@ module cu(
                         phase <= `PH_EXECUTE;
                     end
                     else if (ir[1] == 1 && ir[0] == 0) begin  // addressing mode: absolute, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= regbank[ir[8:6]];
-
-                        if (mem_done) begin
-                            decoded_tmp  <= mem_data_out;
-                            mem_read_en  <= 0;
-                            phase        <= `PH_EXECUTE;
+                        if (~mem_waiting) begin
+                            mem_read_en    <= 1;
+                            mem_addr       <= regbank[ir[8:6]];
+                            mem_waiting    <= 1;
+                        end else begin
+                            decoded_tmp    <= mem_data_out;
+                            mem_read_en    <= 0;
+                            phase          <= `PH_EXECUTE;
+                            mem_waiting    <= 0;
                         end
                     end
                     else if (ir[1] == 0 && ir[0] == 0) begin // addressing mode: pc relative, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= pc + regbank[ir[8:6]] - 1;
-
-                        if (mem_done) begin
-                            decoded_tmp  <= mem_data_out;
-                            mem_read_en  <= 0;
-                            phase        <= `PH_EXECUTE;
+                        if (~mem_waiting) begin
+                            mem_read_en    <= 1;
+                            mem_addr       <= pc + regbank[ir[8:6]] - 1;
+                            mem_waiting    <= 1;
+                        end else begin
+                            decoded_tmp    <= mem_data_out;
+                            mem_read_en    <= 0;
+                            phase          <= `PH_EXECUTE;
+                            mem_waiting    <= 0;
                         end
                     end
                 end
@@ -292,23 +301,27 @@ module cu(
                         phase       <= `PH_FETCH;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= regbank[ir[9:6]];
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= regbank[ir[9:6]];
+                            mem_waiting  <= 1;
+                        end else begin
                             pc          <= mem_data_out;
                             mem_read_en <= 0;
                             phase       <= `PH_FETCH;
+                            mem_waiting <= 0;
                         end
                     end
                     else if (ir[11] == 0 && ir[10] == 0) begin // addressing mode: pc relative, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= pc + regbank[ir[9:6]] - 1;
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= pc + regbank[ir[9:6]] - 1;
+                            mem_waiting  <= 1;
+                        end else begin
                             pc          <= mem_data_out;
                             mem_read_en <= 0;
                             phase       <= `PH_FETCH;
+                            mem_waiting <= 0;
                         end
                     end
                 end
@@ -325,23 +338,27 @@ module cu(
                         phase       <= `PH_FETCH;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= {6'd0, ir[9:0]};
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= {6'd0, ir[9:0]};
+                            mem_waiting  <= 1;
+                        end else begin
                             pc          <= mem_data_out;
                             mem_read_en <= 0;
                             phase       <= `PH_FETCH;
+                            mem_waiting <= 0;
                         end
                     end
                     else if (ir[11] == 0 && ir[10] == 0) begin // addressing mode: pc relative, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= pc + {{6{ir[9]}}, ir[9:0]} - 1;
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= pc + {{6{ir[9]}}, ir[9:0]} - 1;
+                            mem_waiting  <= 1;
+                        end else begin
                             pc          <= mem_data_out;
                             mem_read_en <= 0;
                             phase       <= `PH_FETCH;
+                            mem_waiting <= 0;
                         end
                     end
                 end
@@ -359,23 +376,27 @@ module cu(
                         phase       <= `PH_EXECUTE;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= regbank[ir[7:5]];
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= regbank[ir[7:5]];
+                            mem_waiting  <= 1;
+                        end else begin
                             decoded_tmp <= mem_data_out;
                             mem_read_en <= 0;
                             phase       <= `PH_EXECUTE;
+                            mem_waiting <= 0;
                         end
                     end
                     else if (ir[11] == 0 && ir[10] == 0) begin // addressing mode: pc relative, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= pc + regbank[ir[7:5]] - 1;
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= pc + regbank[ir[7:5]] - 1;
+                            mem_waiting  <= 1;
+                        end else begin
                             decoded_tmp <= mem_data_out;
                             mem_read_en <= 0;
                             phase       <= `PH_EXECUTE;
+                            mem_waiting <= 0;
                         end
                     end
                 end
@@ -393,23 +414,27 @@ module cu(
                         phase       <= `PH_EXECUTE;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= {8'd0, ir[7:0]};
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= {8'd0, ir[7:0]};
+                            mem_waiting  <= 1;
+                        end else begin
                             decoded_tmp <= mem_data_out;
                             mem_read_en <= 0;
                             phase       <= `PH_EXECUTE;
+                            mem_waiting <= 0;
                         end
                     end
                     else if (ir[11] == 0 && ir[10] == 0) begin // addressing mode: pc relative, indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= pc + {{8{ir[7]}}, ir[7:0]} - 1;
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= pc + {{8{ir[7]}}, ir[7:0]} - 1;
+                            mem_waiting  <= 1;
+                        end else begin
                             decoded_tmp <= mem_data_out;
                             mem_read_en <= 0;
                             phase       <= `PH_EXECUTE;
+                            mem_waiting <= 0;
                         end
                     end
                 end
@@ -442,23 +467,27 @@ module cu(
                     phase <= `PH_FETCH;
                 end
                 `OP_LDR: begin
-                    mem_read_en  <= 1;
-                    mem_addr     <= decoded_tmp;
-
-                    if (mem_done) begin
+                    if (~mem_waiting) begin
+                        mem_read_en  <= 1;
+                        mem_addr     <= decoded_tmp;
+                        mem_waiting  <= 1;
+                    end else begin
                         regbank[ir[11:9]] <= mem_data_out; // dereference address
                         mem_read_en       <= 0;
                         phase             <= `PH_FETCH;
+                        mem_waiting       <= 0;
                     end
                 end
                 `OP_STR: begin
-                    mem_write_en  <= 1;
-                    mem_addr      <= decoded_tmp;
-                    mem_data_in   <= regbank[ir[5:3]];
-
-                    if (mem_done) begin
+                    if (~mem_waiting) begin
+                        mem_write_en  <= 1;
+                        mem_addr      <= decoded_tmp;
+                        mem_data_in   <= regbank[ir[5:3]];
+                        mem_waiting   <= 1;
+                    end else begin
                         mem_write_en <= 0;
                         phase        <= `PH_FETCH;
+                        mem_waiting  <= 0;
                     end
                 end
                 `OP_LDI: begin
@@ -472,13 +501,15 @@ module cu(
                         phase <= `PH_FETCH;
                     end
                     else if (ir[0] == 0) begin  // indirect
-                        mem_read_en  <= 1;
-                        mem_addr     <= decoded_tmp;
-
-                        if (mem_done) begin
+                        if (~mem_waiting) begin
+                            mem_read_en  <= 1;
+                            mem_addr     <= decoded_tmp;
+                            mem_waiting  <= 1;
+                        end else begin
                             regbank[ir[11:9]] <= mem_data_out;
                             mem_read_en       <= 0;
                             phase             <= `PH_FETCH;
+                            mem_waiting       <= 0;
                         end
                     end
                 end
