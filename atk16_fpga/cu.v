@@ -65,7 +65,13 @@
 module cu(
     input wire clk,
     input wire rst,
-    input wire [3:0] int_lines
+    input wire [3:0] int_lines,
+
+    output reg  [15:0] sram_addr,
+    output reg  [15:0] sram_in,
+    input  wire [15:0] sram_out,
+    output wire sram_cs_n,
+    output reg  sram_wr_n, sram_rd_n
 );
     reg  [15:0] regbank [0:7];
     reg  [15:0] decoded_tmp;
@@ -79,19 +85,8 @@ module cu(
     reg [3:0]  int_line_regs;
     reg int_en = 1;
 
-    reg  [15:0] mem_addr;
-    reg  [15:0] mem_data_in;
-    reg  mem_read_en, mem_write_en;
-    wire [15:0] mem_data_out;
-    reg  mem_waiting = 0;
-    sram sram_inst(
-        .cs_n(1'd0),
-        .wr_n(~mem_write_en),
-        .rd_n(~mem_read_en),
-        .addr({ 2'd0, mem_addr }),
-        .data_in(mem_data_in),
-        .data_out(mem_data_out)
-    );
+    reg  sram_waiting = 0;
+    assign sram_cs_n = 1'b0;
 
     reg  [2:0]  alu_sel;
     reg  [15:0] alu_a;
@@ -124,6 +119,7 @@ module cu(
 
     integer i;
     always @(posedge clk or posedge rst) begin
+
         // Handle reset button
         if (rst) begin
             phase  <= `PH_RESET;
@@ -161,8 +157,8 @@ module cu(
             phase <= `PH_FETCH;
 
             pc <= 16'd0;
-            mem_read_en   <= 0;
-            mem_write_en  <= 0;
+            sram_rd_n     <= 1;
+            sram_wr_n     <= 1;
 
             for (i = 0; i < 8; i = i + 1) begin
                 regbank[i] <= 16'd0;
@@ -171,16 +167,16 @@ module cu(
 
         // Fetch stage
         else if (phase == `PH_FETCH) begin
-            if (~mem_waiting) begin
-                mem_read_en  <= 1;
-                mem_addr     <= pc;
-                mem_waiting  <= 1;
+            if (~sram_waiting) begin
+                sram_rd_n    <= 0;
+                sram_addr    <= pc;
+                sram_waiting <= 1;
             end else begin
-                mem_read_en  <= 0;
-                ir           <= mem_data_out;
+                sram_rd_n    <= 1;
+                ir           <= sram_out;
                 phase        <= `PH_DECODE;
                 pc           <= pc + 16'd1;
-                mem_waiting  <= 0;
+                sram_waiting <= 0;
             end
         end
 
@@ -212,27 +208,27 @@ module cu(
                         phase <= `PH_EXECUTE;
                     end
                     else if (ir[1] == 1 && ir[0] == 0) begin  // addressing mode: absolute, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en    <= 1;
-                            mem_addr       <= regbank[ir[8:6]];
-                            mem_waiting    <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n      <= 0;
+                            sram_addr      <= regbank[ir[8:6]];
+                            sram_waiting   <= 1;
                         end else begin
-                            decoded_tmp    <= mem_data_out;
-                            mem_read_en    <= 0;
+                            decoded_tmp    <= sram_out;
+                            sram_rd_n      <= 1;
                             phase          <= `PH_EXECUTE;
-                            mem_waiting    <= 0;
+                            sram_waiting   <= 0;
                         end
                     end
                     else if (ir[1] == 0 && ir[0] == 0) begin // addressing mode: pc relative, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en    <= 1;
-                            mem_addr       <= pc + regbank[ir[8:6]] - 1;
-                            mem_waiting    <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n      <= 0;
+                            sram_addr      <= pc + regbank[ir[8:6]] - 1;
+                            sram_waiting   <= 1;
                         end else begin
-                            decoded_tmp    <= mem_data_out;
-                            mem_read_en    <= 0;
+                            decoded_tmp    <= sram_out;
+                            sram_rd_n      <= 1;
                             phase          <= `PH_EXECUTE;
-                            mem_waiting    <= 0;
+                            sram_waiting   <= 0;
                         end
                     end
                 end
@@ -251,27 +247,27 @@ module cu(
                         phase <= `PH_EXECUTE;
                     end
                     else if (ir[1] == 1 && ir[0] == 0) begin  // addressing mode: absolute, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en    <= 1;
-                            mem_addr       <= regbank[ir[8:6]];
-                            mem_waiting    <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n      <= 0;
+                            sram_addr      <= regbank[ir[8:6]];
+                            sram_waiting   <= 1;
                         end else begin
-                            decoded_tmp    <= mem_data_out;
-                            mem_read_en    <= 0;
+                            decoded_tmp    <= sram_out;
+                            sram_rd_n      <= 1;
                             phase          <= `PH_EXECUTE;
-                            mem_waiting    <= 0;
+                            sram_waiting   <= 0;
                         end
                     end
                     else if (ir[1] == 0 && ir[0] == 0) begin // addressing mode: pc relative, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en    <= 1;
-                            mem_addr       <= pc + regbank[ir[8:6]] - 1;
-                            mem_waiting    <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n      <= 0;
+                            sram_addr      <= pc + regbank[ir[8:6]] - 1;
+                            sram_waiting   <= 1;
                         end else begin
-                            decoded_tmp    <= mem_data_out;
-                            mem_read_en    <= 0;
+                            decoded_tmp    <= sram_out;
+                            sram_rd_n      <= 1;
                             phase          <= `PH_EXECUTE;
-                            mem_waiting    <= 0;
+                            sram_waiting   <= 0;
                         end
                     end
                 end
@@ -301,27 +297,27 @@ module cu(
                         phase       <= `PH_FETCH;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= regbank[ir[9:6]];
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= regbank[ir[9:6]];
+                            sram_waiting <= 1;
                         end else begin
-                            pc          <= mem_data_out;
-                            mem_read_en <= 0;
+                            pc          <= sram_out;
+                            sram_rd_n   <= 1;
                             phase       <= `PH_FETCH;
-                            mem_waiting <= 0;
+                            sram_waiting <= 0;
                         end
                     end
                     else if (ir[11] == 0 && ir[10] == 0) begin // addressing mode: pc relative, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= pc + regbank[ir[9:6]] - 1;
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= pc + regbank[ir[9:6]] - 1;
+                            sram_waiting <= 1;
                         end else begin
-                            pc          <= mem_data_out;
-                            mem_read_en <= 0;
+                            pc          <= sram_out;
+                            sram_rd_n   <= 1;
                             phase       <= `PH_FETCH;
-                            mem_waiting <= 0;
+                            sram_waiting <= 0;
                         end
                     end
                 end
@@ -338,27 +334,27 @@ module cu(
                         phase       <= `PH_FETCH;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= {6'd0, ir[9:0]};
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= {6'd0, ir[9:0]};
+                            sram_waiting <= 1;
                         end else begin
-                            pc          <= mem_data_out;
-                            mem_read_en <= 0;
+                            pc          <= sram_out;
+                            sram_rd_n   <= 1;
                             phase       <= `PH_FETCH;
-                            mem_waiting <= 0;
+                            sram_waiting <= 0;
                         end
                     end
                     else if (ir[11] == 0 && ir[10] == 0) begin // addressing mode: pc relative, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= pc + {{6{ir[9]}}, ir[9:0]} - 1;
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= pc + {{6{ir[9]}}, ir[9:0]} - 1;
+                            sram_waiting <= 1;
                         end else begin
-                            pc          <= mem_data_out;
-                            mem_read_en <= 0;
+                            pc          <= sram_out;
+                            sram_rd_n   <= 1;
                             phase       <= `PH_FETCH;
-                            mem_waiting <= 0;
+                            sram_waiting <= 0;
                         end
                     end
                 end
@@ -376,27 +372,27 @@ module cu(
                         phase       <= `PH_EXECUTE;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= regbank[ir[7:5]];
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= regbank[ir[7:5]];
+                            sram_waiting <= 1;
                         end else begin
-                            decoded_tmp <= mem_data_out;
-                            mem_read_en <= 0;
+                            decoded_tmp <= sram_out;
+                            sram_rd_n   <= 1;
                             phase       <= `PH_EXECUTE;
-                            mem_waiting <= 0;
+                            sram_waiting <= 0;
                         end
                     end
                     else if (ir[11] == 0 && ir[10] == 0) begin // addressing mode: pc relative, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= pc + regbank[ir[7:5]] - 1;
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= pc + regbank[ir[7:5]] - 1;
+                            sram_waiting <= 1;
                         end else begin
-                            decoded_tmp <= mem_data_out;
-                            mem_read_en <= 0;
+                            decoded_tmp <= sram_out;
+                            sram_rd_n   <= 1;
                             phase       <= `PH_EXECUTE;
-                            mem_waiting <= 0;
+                            sram_waiting <= 0;
                         end
                     end
                 end
@@ -414,27 +410,27 @@ module cu(
                         phase       <= `PH_EXECUTE;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= {8'd0, ir[7:0]};
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= {8'd0, ir[7:0]};
+                            sram_waiting <= 1;
                         end else begin
-                            decoded_tmp <= mem_data_out;
-                            mem_read_en <= 0;
+                            decoded_tmp <= sram_out;
+                            sram_rd_n   <= 1;
                             phase       <= `PH_EXECUTE;
-                            mem_waiting <= 0;
+                            sram_waiting <= 0;
                         end
                     end
                     else if (ir[11] == 0 && ir[10] == 0) begin // addressing mode: pc relative, indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= pc + {{8{ir[7]}}, ir[7:0]} - 1;
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= pc + {{8{ir[7]}}, ir[7:0]} - 1;
+                            sram_waiting <= 1;
                         end else begin
-                            decoded_tmp <= mem_data_out;
-                            mem_read_en <= 0;
+                            decoded_tmp <= sram_out;
+                            sram_rd_n   <= 1;
                             phase       <= `PH_EXECUTE;
-                            mem_waiting <= 0;
+                            sram_waiting <= 0;
                         end
                     end
                 end
@@ -467,27 +463,27 @@ module cu(
                     phase <= `PH_FETCH;
                 end
                 `OP_LDR: begin
-                    if (~mem_waiting) begin
-                        mem_read_en  <= 1;
-                        mem_addr     <= decoded_tmp;
-                        mem_waiting  <= 1;
+                    if (~sram_waiting) begin
+                        sram_rd_n    <= 0;
+                        sram_addr    <= decoded_tmp;
+                        sram_waiting <= 1;
                     end else begin
-                        regbank[ir[11:9]] <= mem_data_out; // dereference address
-                        mem_read_en       <= 0;
+                        regbank[ir[11:9]] <= sram_out; // dereference address
+                        sram_rd_n         <= 1;
                         phase             <= `PH_FETCH;
-                        mem_waiting       <= 0;
+                        sram_waiting      <= 0;
                     end
                 end
                 `OP_STR: begin
-                    if (~mem_waiting) begin
-                        mem_write_en  <= 1;
-                        mem_addr      <= decoded_tmp;
-                        mem_data_in   <= regbank[ir[5:3]];
-                        mem_waiting   <= 1;
+                    if (~sram_waiting) begin
+                        sram_wr_n     <= 0;
+                        sram_addr     <= decoded_tmp;
+                        sram_in       <= regbank[ir[5:3]];
+                        sram_waiting  <= 1;
                     end else begin
-                        mem_write_en <= 0;
+                        sram_wr_n    <= 1;
                         phase        <= `PH_FETCH;
-                        mem_waiting  <= 0;
+                        sram_waiting <= 0;
                     end
                 end
                 `OP_LDI: begin
@@ -501,15 +497,15 @@ module cu(
                         phase <= `PH_FETCH;
                     end
                     else if (ir[0] == 0) begin  // indirect
-                        if (~mem_waiting) begin
-                            mem_read_en  <= 1;
-                            mem_addr     <= decoded_tmp;
-                            mem_waiting  <= 1;
+                        if (~sram_waiting) begin
+                            sram_rd_n    <= 0;
+                            sram_addr    <= decoded_tmp;
+                            sram_waiting <= 1;
                         end else begin
-                            regbank[ir[11:9]] <= mem_data_out;
-                            mem_read_en       <= 0;
+                            regbank[ir[11:9]] <= sram_out;
+                            sram_rd_n         <= 1;
                             phase             <= `PH_FETCH;
-                            mem_waiting       <= 0;
+                            sram_waiting      <= 0;
                         end
                     end
                 end
