@@ -68,3 +68,9 @@ set_io -nowarn TDI R14
 set_io -nowarn TMS R15
 set_io -nowarn TCK P14
 set_io -nowarn TDO P15
+
+# EXT4 connector
+set_io -nowarn INT[0] G15
+set_io -nowarn INT[1] G10
+set_io -nowarn INT[2] F16
+set_io -nowarn INT[3] G11

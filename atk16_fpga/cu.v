@@ -1,9 +1,10 @@
 `default_nettype none
 
 `define PH_RESET   3'd0
-`define PH_FETCH   3'd1
-`define PH_DECODE  3'd2
-`define PH_EXECUTE 3'd3
+`define PH_CHECK   3'd1
+`define PH_FETCH   3'd2
+`define PH_DECODE  3'd3
+`define PH_EXECUTE 3'd4
 
 `define FL_CARRY    2'd3
 `define FL_OVERFLOW 2'd2
@@ -82,7 +83,8 @@ module cu(
 
     // interrupts
     reg [15:0] int_pc;
-    reg [3:0]  int_line_regs;
+    reg [3:0]  last_int_lines;
+    reg [3:0]  int_tmp; // used as temporary variable
     reg int_en = 1;
 
     reg  sram_waiting = 0;
@@ -112,56 +114,50 @@ module cu(
     assign rg = regbank[6];
     assign rh = regbank[7];
 
-    always @(posedge int_lines[0]) int_line_regs[0] <= int_lines[0];
-    always @(posedge int_lines[1]) int_line_regs[1] <= int_lines[1];
-    always @(posedge int_lines[2]) int_line_regs[2] <= int_lines[2];
-    always @(posedge int_lines[3]) int_line_regs[3] <= int_lines[3];
-
     integer i;
     always @(posedge clk or posedge rst) begin
+        last_int_lines <= int_lines;
 
         // Handle reset button
         if (rst) begin
             phase  <= `PH_RESET;
             halted <= 0;
+            // this line is replicated in PH_RESET handling to appease
+            // yosys async reset analysis
+            last_int_lines <= 4'b0000;
         end
 
         else if (halted) begin
             // Do nothing
         end
 
-        else if (int_en && int_line_regs != 4'b00) begin
-            int_en <= 0;
-            int_pc <= pc;
-            casez (int_line_regs)
-                4'bzzz1: begin
-                    pc               <= 16'h10;
-                    int_line_regs[0] <= 0;
-                end
-                4'bzz1z: begin
-                    pc               <= 16'h11;
-                    int_line_regs[1] <= 0;
-                end
-                4'bz1zz: begin
-                    pc               <= 16'h12;
-                    int_line_regs[2] <= 0;
-                end
-                4'b1zzz: begin
-                    pc               <= 16'h13;
-                    int_line_regs[3] <= 0;
-                end
-            endcase
-        end
-
         else if (phase == `PH_RESET) begin
-            phase <= `PH_FETCH;
+            phase <= `PH_CHECK;
 
-            pc <= 16'd0;
-            sram_rd_n     <= 1;
-            sram_wr_n     <= 1;
+            pc             <= 16'd0;
+            sram_rd_n      <= 1;
+            sram_wr_n      <= 1;
+            last_int_lines <= 4'b0000;
 
             for (i = 0; i < 8; i = i + 1) begin
                 regbank[i] <= 16'd0;
+            end
+        end
+
+        // Check stage (check interrupts)
+        // Compute rising edges of interrupt lines (0 -> 1) (blocking)
+        else if (phase == `PH_CHECK) begin
+            phase <= `PH_FETCH;
+
+            if (int_en && (~last_int_lines & int_lines) != 4'b00) begin
+                int_en <= 0;
+                int_pc <= pc;
+                casez (~last_int_lines & int_lines)
+                    4'bzzz1: pc <= 16'h10;
+                    4'bzz1z: pc <= 16'h11;
+                    4'bz1zz: pc <= 16'h12;
+                    4'b1zzz: pc <= 16'h13;
+                endcase
             end
         end
 
@@ -290,11 +286,11 @@ module cu(
                     // ir[9:6] = address reg
                     if (ir[11] == 1 && ir[10] == 1) begin // addressing mode: absolute, direct
                         pc          <= regbank[ir[9:6]];
-                        phase       <= `PH_FETCH;
+                        phase       <= `PH_CHECK;
                     end
                     else if (ir[11] == 0 && ir[10] == 1) begin // addressing mode: pc relative, direct
                         pc          <= pc + regbank[ir[9:6]] - 1;
-                        phase       <= `PH_FETCH;
+                        phase       <= `PH_CHECK;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
                         if (~sram_waiting) begin
@@ -304,7 +300,7 @@ module cu(
                         end else begin
                             pc          <= sram_out;
                             sram_rd_n   <= 1;
-                            phase       <= `PH_FETCH;
+                            phase       <= `PH_CHECK;
                             sram_waiting <= 0;
                         end
                     end
@@ -316,7 +312,7 @@ module cu(
                         end else begin
                             pc          <= sram_out;
                             sram_rd_n   <= 1;
-                            phase       <= `PH_FETCH;
+                            phase       <= `PH_CHECK;
                             sram_waiting <= 0;
                         end
                     end
@@ -327,11 +323,11 @@ module cu(
                     // ir[9:0] = immediate
                     if (ir[11] == 1 && ir[10] == 1) begin // addressing mode: absolute, direct
                         pc          <= {6'd0, ir[9:0]};
-                        phase       <= `PH_FETCH;
+                        phase       <= `PH_CHECK;
                     end
                     else if (ir[11] == 0 && ir[10] == 1) begin // addressing mode: pc relative, direct
                         pc          <= pc + {{6{ir[9]}}, ir[9:0]} - 1;
-                        phase       <= `PH_FETCH;
+                        phase       <= `PH_CHECK;
                     end
                     else if (ir[11] == 1 && ir[10] == 0) begin // addressing mode: absolute, indirect
                         if (~sram_waiting) begin
@@ -341,7 +337,7 @@ module cu(
                         end else begin
                             pc          <= sram_out;
                             sram_rd_n   <= 1;
-                            phase       <= `PH_FETCH;
+                            phase       <= `PH_CHECK;
                             sram_waiting <= 0;
                         end
                     end
@@ -353,7 +349,7 @@ module cu(
                         end else begin
                             pc          <= sram_out;
                             sram_rd_n   <= 1;
-                            phase       <= `PH_FETCH;
+                            phase       <= `PH_CHECK;
                             sram_waiting <= 0;
                         end
                     end
@@ -437,12 +433,12 @@ module cu(
                 `OP_LPC: begin
                     // ir[11:9] = target reg
                     regbank[ir[11:9]] <= pc;
-                    phase <= `PH_FETCH;
+                    phase <= `PH_CHECK;
                 end
                 `OP_RTI: begin
                     pc     <= int_pc;
                     int_en <= 1;
-                    phase  <= `PH_FETCH;
+                    phase  <= `PH_CHECK;
                 end
                 `OP_HLT: begin
                     halted <= 1;
@@ -460,7 +456,7 @@ module cu(
             case (ir[15:12])
                 `OP_ALR, `OP_ALI: begin
                     regbank[ir[11:9]] <= alu_result; // write result
-                    phase <= `PH_FETCH;
+                    phase <= `PH_CHECK;
                 end
                 `OP_LDR: begin
                     if (~sram_waiting) begin
@@ -470,7 +466,7 @@ module cu(
                     end else begin
                         regbank[ir[11:9]] <= sram_out; // dereference address
                         sram_rd_n         <= 1;
-                        phase             <= `PH_FETCH;
+                        phase             <= `PH_CHECK;
                         sram_waiting      <= 0;
                     end
                 end
@@ -482,7 +478,7 @@ module cu(
                         sram_waiting  <= 1;
                     end else begin
                         sram_wr_n    <= 1;
-                        phase        <= `PH_FETCH;
+                        phase        <= `PH_CHECK;
                         sram_waiting <= 0;
                     end
                 end
@@ -494,7 +490,7 @@ module cu(
                     // decoded_tmp = immediate value that takes absolute/relative to account
                     if (ir[0] == 1) begin       // direct
                         regbank[ir[11:9]] <= decoded_tmp;
-                        phase <= `PH_FETCH;
+                        phase <= `PH_CHECK;
                     end
                     else if (ir[0] == 0) begin  // indirect
                         if (~sram_waiting) begin
@@ -504,7 +500,7 @@ module cu(
                         end else begin
                             regbank[ir[11:9]] <= sram_out;
                             sram_rd_n         <= 1;
-                            phase             <= `PH_FETCH;
+                            phase             <= `PH_CHECK;
                             sram_waiting      <= 0;
                         end
                     end
@@ -515,7 +511,7 @@ module cu(
                     if ((1 << ir[9:8]) & alu_flags != 4'd0) begin
                         pc <= decoded_tmp;
                     end
-                    phase <= `PH_FETCH;
+                    phase <= `PH_CHECK;
                 end
                 default: begin
                     `ifdef __SYNTHESIS__

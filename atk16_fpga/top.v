@@ -9,7 +9,9 @@ module top(
     output SRAM_OE, // inverted
     output SRAM_WE, // inverted
     output [17:0] SA,
-    inout  [15:0] SD
+    inout  [15:0] SD,
+
+    input  [3:0] INT
 );
     cu cu_inst(
         .clk(SYSCLK),
@@ -20,7 +22,9 @@ module top(
         .sram_wr_n(SRAM_WE),
         .sram_addr(SA[15:0]),
         .sram_in(SD),
-        .sram_out(SD)
+        .sram_out(SD),
+
+        .int_lines(INT)
     );
 
     assign SA[17:16] = 2'b0;

@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Thu Dec 26 10:23:44 2024
+[*] Tue Dec 31 07:36:06 2024
 [*]
 [dumpfile] "/Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/cu_tb.vcd"
-[dumpfile_mtime] "Thu Dec 26 10:23:28 2024"
-[dumpfile_size] 3558
+[dumpfile_mtime] "Tue Dec 31 07:35:29 2024"
+[dumpfile_size] 38114
 [savefile] "/Users/jantuomi/Projects/Personal/ATK16/atk16_fpga/cu_tb.gtkw"
 [timestart] 0
 [size] 1728 1051
 [pos] -1 -1
-*-18.634130 214600 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-18.634130 1225000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -42,10 +42,12 @@
 [signals_width] 325
 [sst_expanded] 1
 [sst_vpaned_height] 317
+@25
+cu_tb.test_num[31:0]
 @28
 cu_tb.dut.clk
 cu_tb.dut.rst
-@25
+@24
 cu_tb.dut.phase[2:0]
 @22
 cu_tb.dut.pc[15:0]
@@ -67,11 +69,5 @@ cu_tb.dut.re[15:0]
 cu_tb.dut.rf[15:0]
 cu_tb.dut.rg[15:0]
 cu_tb.dut.rh[15:0]
-cu_tb.dut.bram_addr[15:0]
-cu_tb.dut.bram_data_in[15:0]
-cu_tb.dut.bram_data_out[15:0]
-@28
-cu_tb.dut.bram_rd
-cu_tb.dut.bram_wr
 [pattern_trace] 1
 [pattern_trace] 0
