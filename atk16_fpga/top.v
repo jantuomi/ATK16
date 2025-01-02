@@ -1,5 +1,8 @@
 `default_nettype none
 
+`define PH_COPY_IMG 1'b0
+`define PH_RUN_IMG  1'b1
+
 module top(
     input wire SYSCLK,
     input wire BUT1,
@@ -13,6 +16,8 @@ module top(
 
     input  [3:0] INT
 );
+    reg phase = `PH_COPY_IMG;
+
     cu cu_inst(
         .clk(SYSCLK),
         .rst(BUT1),
