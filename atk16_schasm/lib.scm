@@ -24,9 +24,9 @@
 
 (define (def-label sym . exprs)
   (set! *labels* (cons (cons sym *cursor*) *labels*))
-  ; don't do anything with exprs, it's there for allowing
-  ; a nice appearance for labeled blocks
-)
+  ;; don't do anything with exprs, it's there for allowing
+  ;; a nice appearance for labeled blocks
+  )
 
 (define (at-addr addr)
   (unless (and (number? addr)
@@ -291,6 +291,25 @@
 	`(8 . ,imm))        ; offset
   )
 
+;; "Macros"
+
+(define (emit-packed-string s)
+  ;; emit length
+  (define sl (string-length s))
+  (u16 sl) ; cast to u16 to get bounds check
+  (emit sl)
+
+  ;; compute packed words
+  (define words (pack-bytes-to-words (string->ascii-list s)))
+
+  (let loop ((ws words))
+    (if (null? ws)
+	;; if done, return total number of words emitted
+	(length words)
+	;; if not, emit the word and loop
+	(begin (emit (car ws))
+	       (loop (cdr ws))))))
+
 ;; Utils
 
 (define (type-of v)
@@ -305,3 +324,38 @@
 (define (assocdr k alist)
   (let ((v (assoc k alist)))
     (and v (cdr v))))
+
+(define (string->ascii-list s)
+  (let* ((len (string-length s))
+         (dummy (cons #f '()))
+         (tail dummy))
+    (do ((i 0 (+ i 1)))
+        ((= i len))
+      (set-cdr! tail (cons (char->integer (string-ref s i)) '()))
+      (set! tail (cdr tail)))
+    (cdr dummy)))
+
+(define (pack-bytes-to-words bytes)
+  (cond
+   ((>= (length bytes) 2)
+    (let* ((hi   (car bytes))
+	   (lo   (cadr bytes))
+	   (word (+ (arithmetic-shift hi 8) lo)))
+
+      (unless (and (>= word 0)
+		   (<  word (expt 2 16)))
+	(error "packing of two bytes produced an invalid 16 bit word" word))
+
+      (cons word (pack-bytes-to-words (cddr bytes)))))
+   ((= (length bytes) 1)
+    (let* ((hi   (car bytes))
+	   (word (arithmetic-shift hi 8)))
+
+      (unless (and (>= word 0)
+		   (<  word (expt 2 16)))
+	(error "packing of one byte produced an invalid 16 bit word" word))
+
+      (list word)))
+
+   ((= (length bytes) 0)
+    '())))
