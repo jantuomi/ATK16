@@ -29,5 +29,9 @@
 
 (mov R0 R1)
 
+;; store string data in memory
+(def-label 'data
+  (emit-packed-string "hölynpöly"))
+
 ;; compile to a 128KB image file
 (write-image-to "out.bin")
