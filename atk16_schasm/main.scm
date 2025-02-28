@@ -2,26 +2,32 @@
 
 (load "lib.scm")
 
-(define FL (reg 13))
-(define PC (reg 14))
-(define SP (reg 15))
+;; you can just write a raw word
+(emit #x1234)
 
-(ld SP (imm 0))
+;; compile instructions
+(ld SP (u16 0))
 
+;; set the current emit address
 (at-addr #x10)
-(def-label 'reset-vector)
-(emit #xF800)
-(emit #xF801)
+
+;; set labels
+(def-label 'reset-vector
+  (emit #xF800)
+  (emit #xF801))
 
 (at-addr #x20)
-(def-label 'main)
-(add (reg 1) (reg 2))
-(add (reg 3) (imm #xFF))
+(def-label 'main
+  (add R1 R2)
+  (add R3 (u16 #xFF)))
 
 ;; abs jump
-(ld PC (imm (label 'main)))
+(ld PC (u16 (label 'main)))
 
 ;; rel jump
-(add PC (imm 10))
+(add PC (i16 10))
 
-(mov (reg 0) (reg 1))
+(mov R0 R1)
+
+;; compile to a 128KB image file
+(write-image-to "out.bin")

@@ -1,15 +1,32 @@
 (import (chicken base)
 	(chicken bitwise)
-	(chicken format))
+	(chicken format)
+	(chicken io))
 
 (define *buffer* (make-vector (expt 2 16) #f))
 (define *cursor* 0)
 (define *labels* '())
 
+;; Meta
+
+(define (write-image-to filepath)
+  (let ((port (open-output-file filepath)))
+    (do ((i 0 (+ i 1)))
+        ((= i (vector-length *buffer*)))
+      (let* ((word (or (vector-ref *buffer* i) 0))
+             (high (arithmetic-shift word -8))  ; high byte: shift right by 8 bits
+             (low (bitwise-and word #xFF)))     ; low byte: mask with 0xFF
+        (write-byte high port)
+        (write-byte low port)))
+    (close-output-port port)))
+
 ;; Directives
 
-(define (def-label sym)
-  (set! *labels* (cons (cons sym *cursor*) *labels*)))
+(define (def-label sym . exprs)
+  (set! *labels* (cons (cons sym *cursor*) *labels*))
+  ; don't do anything with exprs, it's there for allowing
+  ; a nice appearance for labeled blocks
+)
 
 (define (at-addr addr)
   (unless (and (number? addr)
@@ -29,14 +46,63 @@
    ((or (< n 0) (>= n 16)) (error "invalid arg to reg" n))
    (else `(reg ,n))))
 
+(define R0  (reg 0))
+(define R1  (reg 1))
+(define R2  (reg 2))
+(define R3  (reg 3))
+(define R4  (reg 4))
+(define R5  (reg 5))
+(define R6  (reg 6))
+(define R7  (reg 7))
+(define R8  (reg 8))
+(define R9  (reg 9))
+(define R10 (reg 10))
+(define R11 (reg 11))
+(define R12 (reg 12))
+(define R13 (reg 13))
+(define R14 (reg 14))
+(define R15 (reg 15))
+
+(define FL (reg 13))
+(define PC (reg 14))
+(define SP (reg 15))
+
 (define (imm n)
-  (let* ((n16 (modulo n (expt 2 16))))
-    `(imm ,n16)))
+  `(imm ,n))
+
+(define (i16 n)
+  (unless (and (<  n (expt 2 15))
+	       (>= n (- (expt 2 15))))
+    (error "n does not fit in bounds" n))
+  (let* ((m (modulo n (expt 2 16))))
+    `(imm ,m)))
+
+(define (u16 n)
+  (unless (and (<  n (expt 2 16))
+	       (>= n 0))
+    (error "n does not fit in bounds" n))
+  (let* ((m (modulo n (expt 2 16))))
+    `(imm ,m)))
+
+(define (i8 n)
+  (unless (and (<  n (expt 2 7))
+	       (>= n (- (expt 2 7))))
+    (error "n does not fit in bounds" n))
+  (let* ((m (modulo n (expt 2 8))))
+    `(imm ,m)))
+
+(define (u8 n)
+  (unless (and (<  n (expt 2 8))
+	       (>= n 0))
+    (error "n does not fit in bounds" n))
+  (let* ((m (modulo n (expt 2 8))))
+    `(imm ,m)))
 
 (define (alu-op n)
-  (cond
-   ((or (< n 0) (>= n 8)) (error "invalid arg to alu-op" n))
-   (else `(alu-op ,n))))
+  (unless (and (>= n 0)
+	       (<  n 8))
+    (error "invalid arg to alu-op" n))
+  `(alu-op ,n))
 
 (define alu-plus  (alu-op 0))
 (define alu-minus (alu-op 1))
@@ -46,6 +112,17 @@
 (define alu-shl   (alu-op 5))
 (define alu-shr   (alu-op 6))
 (define alu-sar   (alu-op 7))
+
+(define (flag n)
+  (unless (and (>= n 0)
+	       (<  n 4))
+    (error "invalid arg to flag" n))
+  `(flag ,n))
+
+(define flag-carry    (flag 0))
+(define flag-overflow (flag 1))
+(define flag-zero     (flag 2))
+(define flag-sign     (flag 3))
 
 ;; Encode and emit
 
@@ -201,20 +278,21 @@
 
 (define (br flag offset #!key (asserted #t))
   (unless (eq? 'flag (type-of flag)) (error "invalid flag selector" flag))
-  (define asserted
-    (cond (#t 1)
-	  (#f 0)
+
+  (define set
+    (cond ((eq? #t asserted) 1)
+	  ((eq? #f asserted) 0)
 	  (else (error "invalid asserted bool" asserted))))
 
   (unless (eq? 'imm (type-of offset)) (error "invalid offset" offset))
-  (define offset (cadr offset))
-  (unless (< offset (expt 2 8)) (error "offset too large" offset))
+  (define imm (cadr offset))
+  (unless (< imm (expt 2 8)) (error "offset too large" imm))
 
   (emit `(4 . 5)            ; opcode = 5
 	`(2 . ,(cadr flag)) ; flag selector
 	`(1 . 0)            ; unused
-	`(1 . ,asserted)    ; asserted (set / not set)
-	`(8 . ,offset))     ; offset
+	`(1 . ,set)         ; asserted (set / not set)
+	`(8 . ,imm))        ; offset
   )
 
 ;; Utils
