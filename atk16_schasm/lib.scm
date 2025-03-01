@@ -10,15 +10,33 @@
 ;; Meta
 
 (define (write-image-to filepath)
+  (eval-*buffer*)
+
   (let ((port (open-output-file filepath)))
     (do ((i 0 (+ i 1)))
         ((= i (vector-length *buffer*)))
       (let* ((word (or (vector-ref *buffer* i) 0))
-             (high (arithmetic-shift word -8))  ; high byte: shift right by 8 bits
-             (low (bitwise-and word #xFF)))     ; low byte: mask with 0xFF
+             (high (arithmetic-shift word -8)) ; high byte: shift right by 8 bits
+             (low (bitwise-and word #xFF))) ; low byte: mask with 0xFF
         (write-byte high port)
         (write-byte low port)))
     (close-output-port port)))
+
+(define (eval-*buffer*)
+  (let loop ((i 0))
+    (if (< i (vector-length *buffer*))
+	(let* ((elem   (vector-ref *buffer* i))
+	       (evaled (eval-*buffer*-elem elem)))
+	  (vector-set! *buffer* i evaled)
+	  (loop (+ i 1))))))
+
+(define (eval-*buffer*-elem elem)
+  (cond
+   ((number? elem) elem)
+   ((eq? #f elem)  0)
+   ((eq? 'label (type-of elem)) (or (assocdr (val-of elem) *labels*)
+				    (error "deferred label ref was never defined" (val-of elem))))
+   (else (error "invalid elem" elem))))
 
 ;; Directives
 
@@ -39,7 +57,7 @@
 ;; Value constructors and references
 
 (define (label sym)
-  (assocdr sym *labels*))
+  (cons 'label sym))
 
 (define (reg n)
   (cond
@@ -125,9 +143,9 @@
 (define (emit . chunks)
   (unless (eq? (vector-ref *buffer* *cursor*) #f)
     (error "overwriting already written memory at" *cursor*))
+
   (define word
-    (if (and (= (length chunks) 1)
-	     (number? (car chunks)))
+    (if (and (= (length chunks) 1))
 	;; single argument
 	(car chunks)
 	;; multiple (bits . value) pairs
@@ -165,16 +183,18 @@
   (unless (eq? 'alu-op (type-of op)) (error "invalid op" op))
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
 
-  (define mode
-    (cond ((eq? 'reg (type-of rhs)) 0)
-	  ((eq? 'imm (type-of rhs)) 1)
+  (define rhs-type (type-of rhs))
+  (define m-mode
+    (cond ((eq? 'reg rhs-type)   0)
+	  ((eq? 'imm rhs-type)   1)
+	  ((eq? 'label rhs-type) 1)
 	  (else (error "invalid rhs" rhs))))
 
-  (if (= mode 0)
+  (if (= m-mode 0)
       ;; reg mode
       (emit `(4 . 1)			; opcode = 1
 	    `(3 . ,(val-of op))		; alu op
-	    `(1 . ,mode)		; reg/imm mode
+	    `(1 . ,m-mode)		; reg/imm mode
 	    `(4 . ,(val-of lhs))      	; lhs
 	    `(4 . ,(val-of rhs)))     	; rhs
 
@@ -182,11 +202,15 @@
       (begin
 	(emit `(4 . 1)	       	        ; opcode = 1
 	      `(3 . ,(val-of op))      	; alu op
-	      `(1 . ,mode)	       	; reg/imm mode
+	      `(1 . ,m-mode)	       	; reg/imm mode
 	      `(4 . ,(val-of lhs))	; lhs
 	      `(4 . 0))		        ; unused
-	(emit (val-of rhs)))            ; rhs
-      ))
+
+	(if (eq? 'label rhs-type)
+	    ;; if label, emit a label reference
+	    (emit rhs)
+	    ;; otherwise, emit the value
+	    (emit (val-of rhs))))))
 
 (define (add lhs rhs) (alu (alu-op 0) lhs rhs))
 (define (sub lhs rhs) (alu (alu-op 1) lhs rhs))
@@ -203,13 +227,12 @@
   (define d-mode (if indirect 1 0))
   (define p-mode (if pop 1 0))
 
+  (define rhs-type (type-of rhs))
   (define m-mode
-    (cond ((eq? 'reg (type-of rhs)) 0)
-	  ((eq? 'imm (type-of rhs)) 1)
+    (cond ((eq? 'reg rhs-type)   0)
+	  ((eq? 'imm rhs-type)   1)
+	  ((eq? 'label rhs-type) 1)
 	  (else (error "invalid rhs" rhs))))
-
-  (print lhs)
-  (print rhs)
 
   (if (= m-mode 0)
       ;; reg mode
@@ -230,8 +253,12 @@
 	      `(1 . ,m-mode)            ; reg/imm mode
        	      `(4 . ,(val-of lhs))      ; lhs
 	      `(4 . 0))		        ; unused
-	(emit (val-of rhs)))            ; rhs
-      ))
+
+	(if (eq? 'label rhs-type)
+	    ;; if label, emit a label reference
+	    (emit rhs)
+	    ;; otherwise, emit the value
+	    (emit (val-of rhs))))))
 
 (define (mov lhs rhs)
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
@@ -248,9 +275,11 @@
   (define d-mode (if indirect 1 0))
   (define p-mode (if push 1 0))
 
+  (define rhs-type (type-of rhs))
   (define m-mode
-    (cond ((eq? 'reg (type-of rhs)) 0)
-	  ((eq? 'imm (type-of rhs)) 1)
+    (cond ((eq? 'reg rhs-type)   0)
+	  ((eq? 'imm rhs-type)   1)
+	  ((eq? 'label rhs-type) 1)
 	  (else (error "invalid rhs" rhs))))
 
   (if (= m-mode 0)
@@ -272,8 +301,12 @@
 	      `(1 . ,m-mode)            ; reg/imm mode
        	      `(4 . ,(val-of lhs))      ; lhs
 	      `(4 . 0))		        ; unused
-	(emit (val-of rhs)))            ; rhs
-      ))
+
+	(if (eq? 'label rhs-type)
+	    ;; if label, emit a label reference
+	    (emit rhs)
+	    ;; otherwise, emit the value
+	    (emit (val-of rhs))))))
 
 (define (br flag offset #!key (asserted #t))
   (unless (eq? 'flag (type-of flag)) (error "invalid flag selector" flag))
@@ -316,8 +349,6 @@
 
 (define (emit-bytes bytes)
   (emit-words (pack-bytes-to-words bytes)))
-
-;; TODO: figure out a system for jumping to a non-declared label 'program here
 
 (define-syntax defer
   (syntax-rules ()

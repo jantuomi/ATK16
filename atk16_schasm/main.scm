@@ -22,11 +22,17 @@
   (add R3 (u16 #xFF)))
 
 ;; abs jump
-(ld PC (u16 (label 'main)))
+(ld PC (label 'main))
 
 ;; rel jump
 (add PC (i16 10))
 
+;; jump forward to a currently undefined label
+(ld PC (label 'forward))
+(def-label 'forward
+  (hlt))
+
+;; copy to register
 (mov R0 R1)
 
 ;; store string data in memory
