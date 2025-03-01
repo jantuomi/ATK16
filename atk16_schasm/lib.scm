@@ -300,8 +300,9 @@
   (emit sl)
 
   ;; compute packed words
-  (define words (pack-bytes-to-words (string->ascii-list s)))
+  (emit-bytes (string->ascii-list s)))
 
+(define (emit-words words)
   (let loop ((ws words))
     (if (null? ws)
 	;; if done, return total number of words emitted
@@ -309,6 +310,16 @@
 	;; if not, emit the word and loop
 	(begin (emit (car ws))
 	       (loop (cdr ws))))))
+
+(define (emit-bytes bytes)
+  (emit-words (pack-bytes-to-words bytes)))
+
+;; TODO: figure out a system for jumping to a non-declared label 'program here
+
+(define-syntax defer
+  (syntax-rules ()
+    ((_ exp exp* ...)
+     (emit (lambda () (exp exp* ...))))))
 
 ;; Utils
 
@@ -356,6 +367,5 @@
 	(error "packing of one byte produced an invalid 16 bit word" word))
 
       (list word)))
-
    ((= (length bytes) 0)
     '())))
