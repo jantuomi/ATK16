@@ -44,7 +44,7 @@
 (define (reg n)
   (cond
    ((or (< n 0) (>= n 16)) (error "invalid arg to reg" n))
-   (else `(reg ,n))))
+   (else (cons 'reg n))))
 
 (define R0  (reg 0))
 (define R1  (reg 1))
@@ -68,37 +68,37 @@
 (define SP (reg 15))
 
 (define (imm n)
-  `(imm ,n))
+  (cons 'imm n))
 
 (define (i16 n)
   (unless (and (<  n (expt 2 15))
 	       (>= n (- (expt 2 15))))
     (error "n does not fit in bounds" n))
-  `(imm ,(modulo n (expt 2 16))))
+  (imm (modulo n (expt 2 16))))
 
 (define (u16 n)
   (unless (and (<  n (expt 2 16))
 	       (>= n 0))
     (error "n does not fit in bounds" n))
-  `(imm ,n))
+  (imm n))
 
 (define (i8 n)
   (unless (and (<  n (expt 2 7))
 	       (>= n (- (expt 2 7))))
     (error "n does not fit in bounds" n))
-  `(imm ,(modulo n (expt 2 16))))
+  (imm (modulo n (expt 2 16))))
 
 (define (u8 n)
   (unless (and (<  n (expt 2 8))
 	       (>= n 0))
     (error "n does not fit in bounds" n))
-  `(imm ,n))
+  (imm n))
 
 (define (alu-op n)
   (unless (and (>= n 0)
 	       (<  n 8))
     (error "invalid arg to alu-op" n))
-  `(alu-op ,n))
+  (cons 'alu-op n))
 
 (define alu-plus  (alu-op 0))
 (define alu-minus (alu-op 1))
@@ -113,7 +113,7 @@
   (unless (and (>= n 0)
 	       (<  n 4))
     (error "invalid arg to flag" n))
-  `(flag ,n))
+  (cons 'flag n))
 
 (define flag-carry    (flag 0))
 (define flag-overflow (flag 1))
@@ -173,19 +173,19 @@
   (if (= mode 0)
       ;; reg mode
       (emit `(4 . 1)			; opcode = 1
-	    `(3 . ,(cadr op))		; alu op
+	    `(3 . ,(val-of op))		; alu op
 	    `(1 . ,mode)		; reg/imm mode
-	    `(4 . ,(cadr lhs))		; lhs
-	    `(4 . ,(cadr rhs)))		; rhs
+	    `(4 . ,(val-of lhs))      	; lhs
+	    `(4 . ,(val-of rhs)))     	; rhs
 
       ;; immediate mode
       (begin
 	(emit `(4 . 1)	       	        ; opcode = 1
-	      `(3 . ,(cadr op))      	; alu op
+	      `(3 . ,(val-of op))      	; alu op
 	      `(1 . ,mode)	       	; reg/imm mode
-	      `(4 . ,(cadr lhs))	; lhs
+	      `(4 . ,(val-of lhs))	; lhs
 	      `(4 . 0))		        ; unused
-	(emit `(16 . ,(cadr rhs))))     ; rhs
+	(emit (val-of rhs)))            ; rhs
       ))
 
 (define (add lhs rhs) (alu (alu-op 0) lhs rhs))
@@ -208,6 +208,9 @@
 	  ((eq? 'imm (type-of rhs)) 1)
 	  (else (error "invalid rhs" rhs))))
 
+  (print lhs)
+  (print rhs)
+
   (if (= m-mode 0)
       ;; reg mode
       (emit `(4 . 2)			; opcode = 2
@@ -215,8 +218,8 @@
 	    `(1 . ,p-mode)		; pop mode
 	    `(1 . 0)                    ; unused
 	    `(1 . ,m-mode)              ; reg/imm mode
-	    `(4 . ,(cadr lhs)) 		; lhs
-	    `(4 . ,(cadr rhs)))		; rhs
+	    `(4 . ,(val-of lhs)) 	; lhs
+	    `(4 . ,(val-of rhs)))	; rhs
 
       ;; immediate mode
       (begin
@@ -225,19 +228,19 @@
 	      `(1 . ,p-mode)		; pop mode
 	      `(1 . 0)                  ; unused
 	      `(1 . ,m-mode)            ; reg/imm mode
-       	      `(4 . ,(cadr lhs))       	; lhs
+       	      `(4 . ,(val-of lhs))      ; lhs
 	      `(4 . 0))		        ; unused
-	(emit `(16 . ,(cadr rhs))))     ; rhs
+	(emit (val-of rhs)))            ; rhs
       ))
 
 (define (mov lhs rhs)
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
   (unless (eq? 'reg (type-of rhs)) (error "invalid rhs" rhs))
 
-  (emit `(4 . 3)             ; opcode = 3
-	`(4 . 0)             ; unused
-	`(4 . ,(cadr lhs))   ; lhs
-	`(4 . ,(cadr rhs)))) ; rhs
+  (emit `(4 . 3)               ; opcode = 3
+	`(4 . 0)               ; unused
+	`(4 . ,(val-of lhs))   ; lhs
+	`(4 . ,(val-of rhs)))) ; rhs
 
 (define (st lhs rhs #!key (indirect #f) (push #f))
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
@@ -257,8 +260,8 @@
 	    `(1 . ,p-mode)		; pop mode
 	    `(1 . 0)                    ; unused
 	    `(1 . ,m-mode)              ; reg/imm mode
-	    `(4 . ,(cadr lhs)) 		; lhs
-	    `(4 . ,(cadr rhs)))		; rhs
+	    `(4 . ,(val-of lhs)) 	; lhs
+	    `(4 . ,(val-of rhs)))	; rhs
 
       ;; immediate mode
       (begin
@@ -267,9 +270,9 @@
 	      `(1 . ,p-mode)		; pop mode
 	      `(1 . 0)                  ; unused
 	      `(1 . ,m-mode)            ; reg/imm mode
-       	      `(4 . ,(cadr lhs))       	; lhs
+       	      `(4 . ,(val-of lhs))      ; lhs
 	      `(4 . 0))		        ; unused
-	(emit `(16 . ,(cadr rhs))))     ; rhs
+	(emit (val-of rhs)))            ; rhs
       ))
 
 (define (br flag offset #!key (asserted #t))
@@ -281,11 +284,11 @@
 	  (else (error "invalid asserted bool" asserted))))
 
   (unless (eq? 'imm (type-of offset)) (error "invalid offset" offset))
-  (define imm (cadr offset))
+  (define imm (val-of offset))
   (unless (< imm (expt 2 8)) (error "offset too large" imm))
 
   (emit `(4 . 5)            ; opcode = 5
-	`(2 . ,(cadr flag)) ; flag selector
+	`(2 . ,(val-of flag)) ; flag selector
 	`(1 . 0)            ; unused
 	`(1 . ,set)         ; asserted (set / not set)
 	`(8 . ,imm))        ; offset
@@ -323,11 +326,10 @@
 
 ;; Utils
 
-(define (type-of v)
-  (if (and (list? v)
-	   (> (length v) 0))
-      (car v)
-      #f))
+(define (type-of pair)
+  (if (pair? pair) (car pair) (error "not a pair" pair)))
+(define (val-of pair)
+  (if (pair? pair) (cdr pair) (error "not a pair" pair)))
 
 (define (assocar k alist)
   (let ((v (assoc k alist)))
