@@ -3,7 +3,7 @@
 	(chicken format)
 	(chicken io))
 
-(define *buffer* (make-vector (expt 2 16) #f))
+(define *buffer* (make-vector (* 2 (expt 2 16)) #f))
 (define *cursor* 0)
 (define *labels* '())
 
@@ -15,11 +15,7 @@
   (let ((port (open-output-file filepath)))
     (do ((i 0 (+ i 1)))
         ((= i (vector-length *buffer*)))
-      (let* ((word (or (vector-ref *buffer* i) 0))
-             (high (arithmetic-shift word -8)) ; high byte: shift right by 8 bits
-             (low (bitwise-and word #xFF))) ; low byte: mask with 0xFF
-        (write-byte high port)
-        (write-byte low port)))
+      (write-byte (vector-ref *buffer* i) port))
     (close-output-port port)))
 
 (define (eval-*buffer*)
@@ -34,8 +30,17 @@
   (cond
    ((number? elem) elem)
    ((eq? #f elem)  0)
-   ((eq? 'label (type-of elem)) (or (assocdr (val-of elem) *labels*)
-				    (error "deferred label ref was never defined" (val-of elem))))
+   ((eq? 'label (type-of elem))
+    (let* ((elem-val (val-of elem))
+	   (qualif   (car elem-val))
+	   (label    (cadr elem-val))
+	   (addr     (or (assocdr label *labels*)
+			 (error "deferred label ref was never defined" label))))
+      (cond
+       ((eq? 'hi qualif)  (arithmetic-shift addr -8))
+       ((eq? 'lo qualif)  (bitwise-and #xFF addr))
+       ((eq? 'rel qualif) (- addr (caddr elem-val)))
+       (else            (error "invalid qualifier in elem" elem)))))
    (else (error "invalid elem" elem))))
 
 ;; Directives
@@ -140,31 +145,17 @@
 
 ;; Encode and emit
 
-(define (emit . chunks)
-  (unless (eq? (vector-ref *buffer* *cursor*) #f)
-    (error "overwriting already written memory at" *cursor*))
-
-  (define word
-    (if (and (= (length chunks) 1))
-	;; single argument
-	(car chunks)
-	;; multiple (bits . value) pairs
-	(apply encode chunks)))
-
-  (vector-set! *buffer* *cursor* word)
-  (set! *cursor* (+ *cursor* 1)))
-
-(define (encode . chunks)
+(define (encode-byte . chunks)
   (let ((total-bits (apply + (map car chunks))))
-    (unless (= total-bits 16)
-      (error "emit: total bits in chunks must equal 16, got" total-bits)))
+    (unless (= total-bits 8)
+      (error "emit: total bits in chunks must equal 8, got" total-bits)))
 
   (let loop ((chs chunks) (acc 0))
     (if (null? chs)
         acc
         (let* ((chunk (car chs))
-               (n (car chunk))
-               (val (cdr chunk)))
+               (n     (car chunk))
+               (val   (cdr chunk)))
 
           (when (>= val (expt 2 n))
             (error "emit: value" val "does not fit in" n "bits"))
@@ -173,11 +164,34 @@
           (loop (cdr chs)
                 (bitwise-ior (arithmetic-shift acc n) val))))))
 
+(define (emit-byte-chunks . chunks)
+  (unless (eq? (vector-ref *buffer* *cursor*) #f)
+    (error "overwriting already written memory at" *cursor*))
+
+  (define byte (apply encode-byte chunks))
+
+  (vector-set! *buffer* *cursor* byte)
+  (set! *cursor* (+ *cursor* 1)))
+
+(define (emit-byte b)
+  (emit-byte-chunks `(8 . ,b)))
+
+(define (emit-word w)
+  ;; emit a word as two bytes
+  (emit-byte-chunks `(8 . ,(arithmetic-shift w -8)))
+  (emit-byte-chunks `(8 . ,(bitwise-and #xFF w))))
+
+(define (emit-deferred-sexpr sexpr)
+  (unless (pair? sexpr)
+    (error "not a pair" sexpr))
+  (vector-set! *buffer* *cursor* sexpr)
+  (set! *cursor* (+ *cursor* 1)))
+
 ;; Instructions
 
 (define (hlt)
   ;; just full zeros
-  (emit 0))
+  (emit-word 0))
 
 (define (alu op lhs rhs)
   (unless (eq? 'alu-op (type-of op)) (error "invalid op" op))
@@ -192,25 +206,27 @@
 
   (if (= m-mode 0)
       ;; reg mode
-      (emit `(4 . 1)			; opcode = 1
-	    `(3 . ,(val-of op))		; alu op
-	    `(1 . ,m-mode)		; reg/imm mode
-	    `(4 . ,(val-of lhs))      	; lhs
-	    `(4 . ,(val-of rhs)))     	; rhs
+      (begin
+	(emit-byte-chunks `(4 . 1)
+			  `(3 . ,(val-of op))
+			  `(1 . ,m-mode))
+	(emit-byte-chunks `(4 . ,(val-of lhs))
+	                  `(4 . ,(val-of rhs))))
 
       ;; immediate mode
       (begin
-	(emit `(4 . 1)	       	        ; opcode = 1
-	      `(3 . ,(val-of op))      	; alu op
-	      `(1 . ,m-mode)	       	; reg/imm mode
-	      `(4 . ,(val-of lhs))	; lhs
-	      `(4 . 0))		        ; unused
+	(emit-byte-chunks `(4 . 1)
+			  `(3 . ,(val-of op))
+			  `(1 . ,m-mode))
+	(emit-byte-chunks `(4 . ,(val-of lhs))
+			  `(4 . 0))
 
 	(if (eq? 'label rhs-type)
 	    ;; if label, emit a label reference
-	    (emit rhs)
+	    (begin (emit-deferred-sexpr `(label . (hi ,(val-of rhs))))
+		   (emit-deferred-sexpr `(label . (lo ,(val-of rhs)))))
 	    ;; otherwise, emit the value
-	    (emit (val-of rhs))))))
+	    (emit-word (val-of rhs))))))
 
 (define (add lhs rhs) (alu (alu-op 0) lhs rhs))
 (define (sub lhs rhs) (alu (alu-op 1) lhs rhs))
@@ -236,38 +252,40 @@
 
   (if (= m-mode 0)
       ;; reg mode
-      (emit `(4 . 2)			; opcode = 2
-	    `(1 . ,d-mode)		; indirect mode
-	    `(1 . ,p-mode)		; pop mode
-	    `(1 . 0)                    ; unused
-	    `(1 . ,m-mode)              ; reg/imm mode
-	    `(4 . ,(val-of lhs)) 	; lhs
-	    `(4 . ,(val-of rhs)))	; rhs
+      (begin
+	(emit-byte-chunks `(4 . 2)
+			  `(1 . ,d-mode)
+			  `(1 . ,p-mode)
+			  `(1 . 0)
+			  `(1 . ,m-mode))
+	(emit-byte-chunks `(4 . ,(val-of lhs))
+			  `(4 . ,(val-of rhs))))
 
       ;; immediate mode
       (begin
-	(emit `(4 . 2)			; opcode = 2
-	      `(1 . ,d-mode)		; indirect mode
-	      `(1 . ,p-mode)		; pop mode
-	      `(1 . 0)                  ; unused
-	      `(1 . ,m-mode)            ; reg/imm mode
-       	      `(4 . ,(val-of lhs))      ; lhs
-	      `(4 . 0))		        ; unused
+	(emit-byte-chunks `(4 . 2)
+			  `(1 . ,d-mode)
+			  `(1 . ,p-mode)
+			  `(1 . 0)
+			  `(1 . ,m-mode))
+	(emit-byte-chunks `(4 . ,(val-of lhs))
+			  `(4 . 0))
 
 	(if (eq? 'label rhs-type)
 	    ;; if label, emit a label reference
-	    (emit rhs)
+	    (begin (emit-deferred-sexpr `(label . (hi ,(val-of rhs))))
+		   (emit-deferred-sexpr `(label . (lo ,(val-of rhs)))))
 	    ;; otherwise, emit the value
-	    (emit (val-of rhs))))))
+	    (emit-word (val-of rhs))))))
 
 (define (mov lhs rhs)
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
   (unless (eq? 'reg (type-of rhs)) (error "invalid rhs" rhs))
 
-  (emit `(4 . 3)               ; opcode = 3
-	`(4 . 0)               ; unused
-	`(4 . ,(val-of lhs))   ; lhs
-	`(4 . ,(val-of rhs)))) ; rhs
+  (emit-byte-chunks `(4 . 3)
+		    `(4 . 0))
+  (emit-byte-chunks `(4 . ,(val-of lhs))
+		    `(4 . ,(val-of rhs))))
 
 (define (st lhs rhs #!key (indirect #f) (push #f))
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
@@ -284,29 +302,31 @@
 
   (if (= m-mode 0)
       ;; reg mode
-      (emit `(4 . 4)			; opcode = 4
-	    `(1 . ,d-mode)		; indirect mode
-	    `(1 . ,p-mode)		; pop mode
-	    `(1 . 0)                    ; unused
-	    `(1 . ,m-mode)              ; reg/imm mode
-	    `(4 . ,(val-of lhs)) 	; lhs
-	    `(4 . ,(val-of rhs)))	; rhs
+      (begin
+	(emit-byte-chunks `(4 . 4)
+			  `(1 . ,d-mode)
+			  `(1 . ,p-mode)
+			  `(1 . 0)
+			  `(1 . ,m-mode))
+	(emit-byte-chunks `(4 . ,(val-of lhs))
+			  `(4 . ,(val-of rhs))))
 
       ;; immediate mode
       (begin
-	(emit `(4 . 4)			; opcode = 4
-	      `(1 . ,d-mode)		; indirect mode
-	      `(1 . ,p-mode)		; pop mode
-	      `(1 . 0)                  ; unused
-	      `(1 . ,m-mode)            ; reg/imm mode
-       	      `(4 . ,(val-of lhs))      ; lhs
-	      `(4 . 0))		        ; unused
+	(emit-byte-chunks `(4 . 4)
+			  `(1 . ,d-mode)
+			  `(1 . ,p-mode)
+			  `(1 . 0)
+			  `(1 . ,m-mode))
+	(emit-byte-chunks `(4 . ,(val-of lhs))
+			  `(4 . 0))
 
 	(if (eq? 'label rhs-type)
 	    ;; if label, emit a label reference
-	    (emit rhs)
+	    (begin (emit-deferred-sexpr `(label . (hi ,(val-of rhs))))
+		   (emit-deferred-sexpr `(label . (lo ,(val-of rhs)))))
 	    ;; otherwise, emit the value
-	    (emit (val-of rhs))))))
+	    (emit-word (val-of rhs))))))
 
 (define (br flag offset #!key (asserted #t))
   (unless (eq? 'flag (type-of flag)) (error "invalid flag selector" flag))
@@ -316,16 +336,24 @@
 	  ((eq? #f asserted) 0)
 	  (else (error "invalid asserted bool" asserted))))
 
-  (unless (eq? 'imm (type-of offset)) (error "invalid offset" offset))
-  (define imm (val-of offset))
-  (unless (< imm (expt 2 8)) (error "offset too large" imm))
+  (define offset-type (type-of offset))
+  (cond
+   ((eq? 'imm offset-type)
+    (let* ((imm (val-of offset)))
+      (unless (< imm (expt 2 8)) (error "offset too large" imm))
 
-  (emit `(4 . 5)            ; opcode = 5
-	`(2 . ,(val-of flag)) ; flag selector
-	`(1 . 0)            ; unused
-	`(1 . ,set)         ; asserted (set / not set)
-	`(8 . ,imm))        ; offset
-  )
+      (emit-byte-chunks `(4 . 5)
+			`(2 . ,(val-of flag))
+			`(1 . 0)
+			`(1 . ,set))
+      (emit `(8 . ,imm))))
+   ((eq? 'label offset-type)
+    (emit-byte-chunks `(4 . 5)
+		      `(2 . ,(val-of flag))
+		      `(1 . 0)
+		      `(1 . ,set))
+    (emit-deferred-sexpr `(label . (rel ,(val-of offset) ,(+ *cursor* 1)))))
+   (else (error "invalid offset" offset))))
 
 ;; "Macros"
 
@@ -333,27 +361,19 @@
   ;; emit length
   (define sl (string-length s))
   (u16 sl) ; cast to u16 to get bounds check
-  (emit sl)
+  (emit-word sl)
 
   ;; compute packed words
   (emit-bytes (string->ascii-list s)))
 
-(define (emit-words words)
-  (let loop ((ws words))
-    (if (null? ws)
-	;; if done, return total number of words emitted
-	(length words)
-	;; if not, emit the word and loop
-	(begin (emit (car ws))
-	       (loop (cdr ws))))))
-
 (define (emit-bytes bytes)
-  (emit-words (pack-bytes-to-words bytes)))
-
-(define-syntax defer
-  (syntax-rules ()
-    ((_ exp exp* ...)
-     (emit (lambda () (exp exp* ...))))))
+  (let loop ((bs bytes))
+    (if (null? bs)
+	;; if done, return total number of bytes emitted
+	(length bytes)
+	;; if not, emit the byte and loop
+	(begin (emit-byte (car bs))
+	       (loop (cdr bs))))))
 
 ;; Utils
 

@@ -2,20 +2,21 @@
 
 (load "lib.scm")
 
+;; load asm modules
+(load "bootstrap.scm")
+
 ;; you can just write a raw word
-(emit #x1234)
+(emit-word #x1234)
 
 ;; compile instructions
 (ld SP (u16 0))
 
-;; set the current emit address
-(at-addr #x10)
-
 ;; set labels
-(def-label 'reset-vector
-  (emit #xF800)
-  (emit #xF801))
+(def-label 'some-data
+  (emit-word #xF800)
+  (emit-word #xF801))
 
+;; set the current emit address
 (at-addr #x20)
 (def-label 'main
   (add R1 R2)
@@ -38,6 +39,17 @@
 ;; store string data in memory
 (def-label 'data
   (emit-packed-string "hölynpöly"))
+
+(at-addr #x50)
+
+;; branch based on an ALU flag
+(br flag-carry (label 'branch-true) set: #t)
+(def-label 'branch-false
+  (emit-word 1))
+(def-label 'branch-true
+  (emit-word 2))
+
+;;(print *buffer*)
 
 ;; compile to a 128KB image file
 (write-image-to "out.bin")
