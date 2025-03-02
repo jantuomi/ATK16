@@ -7,7 +7,7 @@
 (define *cursor* 0)
 (define *labels* '())
 
-;; Meta
+;; Buffer write and eval
 
 (define (write-image-to filepath)
   (eval-*buffer*)
@@ -43,9 +43,64 @@
        (else            (error "invalid qualifier in elem" elem)))))
    (else (error "invalid elem" elem))))
 
+;; Encode and emit
+
+(define (encode-byte . chunks)
+  (let ((total-bits (apply + (map car chunks))))
+    (unless (= total-bits 8)
+      (error "emit: total bits in chunks must equal 8, got" total-bits)))
+
+  (let loop ((chs chunks) (acc 0))
+    (if (null? chs)
+        acc
+        (let* ((chunk (car chs))
+               (n     (car chunk))
+               (val   (cdr chunk)))
+
+          (when (>= val (expt 2 n))
+            (error "emit: value" val "does not fit in" n "bits"))
+
+          ;; shift acc left by n bits and combine with val
+          (loop (cdr chs)
+                (bitwise-ior (arithmetic-shift acc n) val))))))
+
+(define (emit-byte-chunks . chunks)
+  (unless (eq? (vector-ref *buffer* *cursor*) #f)
+    (error "overwriting already written memory at" *cursor*))
+
+  (define byte (apply encode-byte chunks))
+
+  (vector-set! *buffer* *cursor* byte)
+  (set! *cursor* (+ *cursor* 1)))
+
+(define (emit-byte b)
+  (unless (and (>= b 0)
+	       (<  b (expt 2 8)))
+    (error "value out of bounds" byte))
+
+  (emit-byte-chunks `(8 . ,b)))
+
+(define (emit-word w)
+  (unless (and (>= w 0)
+	       (<  w (expt 2 16)))
+    (error "value out of bounds" w))
+
+  ;; emit a word as two bytes
+  (emit-byte-chunks `(8 . ,(arithmetic-shift w -8)))
+  (emit-byte-chunks `(8 . ,(bitwise-and #xFF w))))
+
+(define (emit-deferred-sexpr sexpr)
+  (unless (pair? sexpr)
+    (error "not a pair" sexpr))
+  (vector-set! *buffer* *cursor* sexpr)
+  (set! *cursor* (+ *cursor* 1)))
+
 ;; Directives
 
 (define (def-label sym . exprs)
+  (when (assoc sym *labels*)
+    (error "label already defined" sym))
+
   (set! *labels* (cons (cons sym *cursor*) *labels*))
   ;; don't do anything with exprs, it's there for allowing
   ;; a nice appearance for labeled blocks
@@ -142,50 +197,6 @@
 (define flag-overflow (flag 1))
 (define flag-zero     (flag 2))
 (define flag-sign     (flag 3))
-
-;; Encode and emit
-
-(define (encode-byte . chunks)
-  (let ((total-bits (apply + (map car chunks))))
-    (unless (= total-bits 8)
-      (error "emit: total bits in chunks must equal 8, got" total-bits)))
-
-  (let loop ((chs chunks) (acc 0))
-    (if (null? chs)
-        acc
-        (let* ((chunk (car chs))
-               (n     (car chunk))
-               (val   (cdr chunk)))
-
-          (when (>= val (expt 2 n))
-            (error "emit: value" val "does not fit in" n "bits"))
-
-          ;; shift acc left by n bits and combine with val
-          (loop (cdr chs)
-                (bitwise-ior (arithmetic-shift acc n) val))))))
-
-(define (emit-byte-chunks . chunks)
-  (unless (eq? (vector-ref *buffer* *cursor*) #f)
-    (error "overwriting already written memory at" *cursor*))
-
-  (define byte (apply encode-byte chunks))
-
-  (vector-set! *buffer* *cursor* byte)
-  (set! *cursor* (+ *cursor* 1)))
-
-(define (emit-byte b)
-  (emit-byte-chunks `(8 . ,b)))
-
-(define (emit-word w)
-  ;; emit a word as two bytes
-  (emit-byte-chunks `(8 . ,(arithmetic-shift w -8)))
-  (emit-byte-chunks `(8 . ,(bitwise-and #xFF w))))
-
-(define (emit-deferred-sexpr sexpr)
-  (unless (pair? sexpr)
-    (error "not a pair" sexpr))
-  (vector-set! *buffer* *cursor* sexpr)
-  (set! *cursor* (+ *cursor* 1)))
 
 ;; Instructions
 
