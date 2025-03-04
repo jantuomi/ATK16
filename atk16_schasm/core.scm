@@ -3,6 +3,37 @@
 	(chicken format)
 	(chicken io))
 
+;; Utils
+
+(define-syntax @
+  (syntax-rules ()
+    ((_ fn-body expr ...)
+     (lambda (x) (fn-body expr ... x)))))
+
+(define (type-of pair)
+  (if (pair? pair) (car pair) (error "not a pair" pair)))
+(define (val-of pair)
+  (if (pair? pair) (cdr pair) (error "not a pair" pair)))
+
+(define (assocar k alist)
+  (let ((v (assoc k alist)))
+    (and v (car v))))
+(define (assocdr k alist)
+  (let ((v (assoc k alist)))
+    (and v (cdr v))))
+
+(define (string->ascii-list s)
+  (let* ((len (string-length s))
+         (dummy (cons #f '()))
+         (tail dummy))
+    (do ((i 0 (+ i 1)))
+        ((= i len))
+      (set-cdr! tail (cons (char->integer (string-ref s i)) '()))
+      (set! tail (cdr tail)))
+    (cdr dummy)))
+
+;; State
+
 (define *buffer* (make-vector (* 2 (expt 2 16)) #f))
 (define *cursor* 0)
 (define *labels* '())
@@ -248,10 +279,9 @@
 (define (shr lhs rhs) (alu (alu-op 6) lhs rhs))
 (define (sar lhs rhs) (alu (alu-op 7) lhs rhs))
 
-(define (ld lhs rhs #!key (indirect #f) (pop #f))
+(define (ld lhs rhs #!key (indirect 0) (pop #f))
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
 
-  (define d-mode (if indirect 1 0))
   (define p-mode (if pop 1 0))
 
   (define rhs-type (type-of rhs))
@@ -265,9 +295,8 @@
       ;; reg mode
       (begin
 	(emit-byte-chunks `(4 . 2)
-			  `(1 . ,d-mode)
+			  `(2 . ,indirect)
 			  `(1 . ,p-mode)
-			  `(1 . 0)
 			  `(1 . ,m-mode))
 	(emit-byte-chunks `(4 . ,(val-of lhs))
 			  `(4 . ,(val-of rhs))))
@@ -275,9 +304,8 @@
       ;; immediate mode
       (begin
 	(emit-byte-chunks `(4 . 2)
-			  `(1 . ,d-mode)
+			  `(2 . ,indirect)
 			  `(1 . ,p-mode)
-			  `(1 . 0)
 			  `(1 . ,m-mode))
 	(emit-byte-chunks `(4 . ,(val-of lhs))
 			  `(4 . 0))
@@ -289,19 +317,9 @@
 	    ;; otherwise, emit the value
 	    (emit-word (val-of rhs))))))
 
-(define (mov lhs rhs)
-  (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
-  (unless (eq? 'reg (type-of rhs)) (error "invalid rhs" rhs))
-
-  (emit-byte-chunks `(4 . 3)
-		    `(4 . 0))
-  (emit-byte-chunks `(4 . ,(val-of lhs))
-		    `(4 . ,(val-of rhs))))
-
-(define (st lhs rhs #!key (indirect #f) (push #f))
+(define (st lhs rhs #!key (indirect 0) (push #f))
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
 
-  (define d-mode (if indirect 1 0))
   (define p-mode (if push 1 0))
 
   (define rhs-type (type-of rhs))
@@ -315,9 +333,8 @@
       ;; reg mode
       (begin
 	(emit-byte-chunks `(4 . 4)
-			  `(1 . ,d-mode)
+			  `(2 . ,indirect)
 			  `(1 . ,p-mode)
-			  `(1 . 0)
 			  `(1 . ,m-mode))
 	(emit-byte-chunks `(4 . ,(val-of lhs))
 			  `(4 . ,(val-of rhs))))
@@ -325,9 +342,8 @@
       ;; immediate mode
       (begin
 	(emit-byte-chunks `(4 . 4)
-			  `(1 . ,d-mode)
+			  `(2 . ,indirect)
 			  `(1 . ,p-mode)
-			  `(1 . 0)
 			  `(1 . ,m-mode))
 	(emit-byte-chunks `(4 . ,(val-of lhs))
 			  `(4 . 0))
@@ -365,71 +381,3 @@
 		      `(1 . ,set))
     (emit-deferred-sexpr `(label . (rel ,(val-of offset) ,(+ *cursor* 1)))))
    (else (error "invalid offset" offset))))
-
-;; "Macros"
-
-(define (emit-packed-string s)
-  ;; emit length
-  (define sl (string-length s))
-  (u16 sl) ; cast to u16 to get bounds check
-  (emit-word sl)
-
-  ;; compute packed words
-  (emit-bytes (string->ascii-list s)))
-
-(define (emit-bytes bytes)
-  (let loop ((bs bytes))
-    (if (null? bs)
-	;; if done, return total number of bytes emitted
-	(length bytes)
-	;; if not, emit the byte and loop
-	(begin (emit-byte (car bs))
-	       (loop (cdr bs))))))
-
-;; Utils
-
-(define (type-of pair)
-  (if (pair? pair) (car pair) (error "not a pair" pair)))
-(define (val-of pair)
-  (if (pair? pair) (cdr pair) (error "not a pair" pair)))
-
-(define (assocar k alist)
-  (let ((v (assoc k alist)))
-    (and v (car v))))
-(define (assocdr k alist)
-  (let ((v (assoc k alist)))
-    (and v (cdr v))))
-
-(define (string->ascii-list s)
-  (let* ((len (string-length s))
-         (dummy (cons #f '()))
-         (tail dummy))
-    (do ((i 0 (+ i 1)))
-        ((= i len))
-      (set-cdr! tail (cons (char->integer (string-ref s i)) '()))
-      (set! tail (cdr tail)))
-    (cdr dummy)))
-
-(define (pack-bytes-to-words bytes)
-  (cond
-   ((>= (length bytes) 2)
-    (let* ((hi   (car bytes))
-	   (lo   (cadr bytes))
-	   (word (+ (arithmetic-shift hi 8) lo)))
-
-      (unless (and (>= word 0)
-		   (<  word (expt 2 16)))
-	(error "packing of two bytes produced an invalid 16 bit word" word))
-
-      (cons word (pack-bytes-to-words (cddr bytes)))))
-   ((= (length bytes) 1)
-    (let* ((hi   (car bytes))
-	   (word (arithmetic-shift hi 8)))
-
-      (unless (and (>= word 0)
-		   (<  word (expt 2 16)))
-	(error "packing of one byte produced an invalid 16 bit word" word))
-
-      (list word)))
-   ((= (length bytes) 0)
-    '())))

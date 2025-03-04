@@ -1,6 +1,7 @@
 (import (chicken base))
 
-(load "lib.scm")
+(load "core.scm")
+(load "macros.scm")
 
 ;; load asm modules
 (load "bootstrap.scm")
@@ -33,12 +34,9 @@
 (def-label 'forward
   (hlt))
 
-;; copy to register
-(mov R0 R1)
-
 ;; store string data in memory
 (def-label 'data
-  (emit-packed-string "hölynpöly"))
+  (%packed-string "hölynpöly"))
 
 (at-addr #x50)
 
@@ -49,7 +47,14 @@
 (def-label 'branch-true
   (emit-word 2))
 
-;;(print *buffer*)
+;; use macros for convenience
+(let ((x #x5678))
+  (%if-else (R1 == R2)
+	    (emit-word #x1234)
+	    (emit-word x)))
+
+(%if (R1 <= (u16 #xFF))
+     (emit-word #xbeef))
 
 ;; compile to a 128KB image file
 (write-image-to "out.bin")
