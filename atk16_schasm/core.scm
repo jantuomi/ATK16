@@ -5,6 +5,11 @@
 
 ;; Utils
 
+(define-syntax comment
+  (syntax-rules ()
+    ((_ expr* ...)
+     (begin))))
+
 (define-syntax @
   (syntax-rules ()
     ((_ fn-body expr ...)

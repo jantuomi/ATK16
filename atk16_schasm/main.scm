@@ -35,7 +35,7 @@
   (hlt))
 
 ;; store string data in memory
-(def-label 'data
+(def-label 'text-data
   (%packed-string "hölynpöly"))
 
 (at-addr #x50)
@@ -55,6 +55,12 @@
 
 (%if (R1 <= (u16 #xFF))
      (emit-word #xbeef))
+
+(comment
+ (ld R1 (u16 10))
+ (%while (R1 > (u16 0))
+	 (%call println (label 'text-data))
+	 (sub R1 (u16 1))))
 
 ;; compile to a 128KB image file
 (write-image-to "out.bin")
