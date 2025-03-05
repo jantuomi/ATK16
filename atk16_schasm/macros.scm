@@ -34,6 +34,23 @@
 	    (sub lhs (u16 1))
 	    (br flag-sign (label dest) set: set)))))
 
+(define-syntax emit-inverted-test
+  ;; jump to dest if <lhs op rhs> is NOT true.
+  ;; as such the behaviour of this macro can be considered to
+  ;; be inverted.
+  ;; the reason for this is to allow having the true branch
+  ;; before the false branch in memory (arbitrary decision).
+  (syntax-rules ()
+    ((_ lhs op rhs dest)
+     (cond
+      ((eq? '== op) (emit-test-eq  lhs rhs dest #f))
+      ((eq? '!= op) (emit-test-eq  lhs rhs dest #t))
+      ((eq? '<  op) (emit-test-lt  lhs rhs dest #f))
+      ((eq? '>= op) (emit-test-lt  lhs rhs dest #t))
+      ((eq? '<= op) (emit-test-lte lhs rhs dest #f))
+      ((eq? '>  op) (emit-test-lte lhs rhs dest #t))
+      (else (error "unsupported operator" op))))))
+
 (define-syntax %if-else
   (syntax-rules ()
     ((_ pred tb fb)
@@ -45,14 +62,7 @@
 	    (sym-end   (string->symbol (format "~A-end"   n))))
        (ld *macro-scratch-reg* lhs)
 
-       (cond
-	((eq? '== op) (emit-test-eq  *macro-scratch-reg* rhs sym-false #f))
-	((eq? '!= op) (emit-test-eq  *macro-scratch-reg* rhs sym-false #t))
-	((eq? '<  op) (emit-test-lt  *macro-scratch-reg* rhs sym-false #f))
-	((eq? '>= op) (emit-test-lt  *macro-scratch-reg* rhs sym-false #t))
-	((eq? '<= op) (emit-test-lte *macro-scratch-reg* rhs sym-false #f))
-	((eq? '>  op) (emit-test-lte *macro-scratch-reg* rhs sym-false #t))
-	(else (error "unsupported operator" op)))
+       (emit-inverted-test *macro-scratch-reg* op rhs sym-false)
 
        tb
        (ld PC (label sym-end))
@@ -70,14 +80,8 @@
 	    (sym-end   (string->symbol (format "~A-end"   n))))
        (ld *macro-scratch-reg* lhs)
 
-       (cond
-	((eq? '== op) (emit-test-eq  *macro-scratch-reg* rhs sym-end #f))
-	((eq? '!= op) (emit-test-eq  *macro-scratch-reg* rhs sym-end #t))
-	((eq? '<  op) (emit-test-lt  *macro-scratch-reg* rhs sym-end #f))
-	((eq? '>= op) (emit-test-lt  *macro-scratch-reg* rhs sym-end #t))
-	((eq? '<= op) (emit-test-lte *macro-scratch-reg* rhs sym-end #f))
-	((eq? '>  op) (emit-test-lte *macro-scratch-reg* rhs sym-end #t))
-	(else (error "unsupported operator" op)))
+       (emit-inverted-test *macro-scratch-reg* op rhs sym-end)
 
        tb
        (def-label sym-end)))))
+
