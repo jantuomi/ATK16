@@ -133,22 +133,28 @@
 
 ;; Directives
 
-(define (def-label sym . exprs)
-  (when (assoc sym *labels*)
-    (error "label already defined" sym))
+(define-syntax def-label
+  (syntax-rules ()
+    ((_ sym exprs* ...)
+     (begin
+       (when (assoc sym *labels*)
+	 (error "label already defined" sym))
 
-  (set! *labels* (cons (cons sym *cursor*) *labels*))
-  ;; don't do anything with exprs, it's there for allowing
-  ;; a nice appearance for labeled blocks
-  )
+       (set! *labels* (cons (cons sym *cursor*) *labels*))
+       exprs* ...))))
 
-(define (at-addr addr)
-  (unless (and (number? addr)
-	       (>= addr 0)
-	       (< addr (expt 2 16)))
-    (error "invalid addr" addr))
+(define-syntax at-addr
+  (syntax-rules ()
+    ((_ addr exprs* ...)
+     (begin
+       (unless (and (number? addr)
+		    (>= addr 0)
+		    (< addr (expt 2 16)))
+	 (error "invalid addr" addr))
 
-  (set! *cursor* addr))
+       (set! *cursor* addr)
+
+       exprs* ...))))
 
 ;; Value constructors and references
 
@@ -384,5 +390,5 @@
 		      `(2 . ,(val-of flag))
 		      `(1 . 0)
 		      `(1 . ,set))
-    (emit-deferred-sexpr `(label . (rel ,(val-of offset) ,(+ *cursor* 1)))))
+    (emit-deferred-sexpr `(label . (rel ,(val-of offset) ,(- *cursor* 1)))))
    (else (error "invalid offset" offset))))
