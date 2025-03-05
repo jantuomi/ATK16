@@ -47,7 +47,7 @@
 (def-label 'branch-true
   (emit-word 2))
 
-;; use macros for convenience
+;; use macros like %if, %while for convenience
 (let ((x #x5678))
   (%if-else (R1 == R2)
 	    (emit-word #x1234)
@@ -56,11 +56,18 @@
 (%if (R1 <= (u16 #xFF))
      (emit-word #xbeef))
 
-(comment
- (ld R1 (u16 10))
- (%while (R1 > (u16 0))
-	 (%call println (label 'text-data))
-	 (sub R1 (u16 1))))
+;; procedure declarations
+(%def-proc println str)
+(def-label 'println
+  ;; R0 := str
+  ;; ...
+  (ld PC SP pop: #t indirect: 1))
+
+;; procedure calls
+(ld R1 (u16 10))
+(%while (R1 > (u16 0))
+	(%call println (label 'text-data))
+	(sub R1 (u16 1)))
 
 ;; compile to a 128KB image file
 (write-image-to "out.bin")

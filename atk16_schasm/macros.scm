@@ -72,7 +72,7 @@
 
 (define-syntax %if
   (syntax-rules ()
-    ((_ pred tb)
+    ((_ pred body body* ...)
      (let* ((lhs  (eval (car 'pred)))
 	    (op   (cadr 'pred))
 	    (rhs  (eval (caddr 'pred)))
@@ -82,6 +82,56 @@
 
        (emit-inverted-test *macro-scratch-reg* op rhs sym-end)
 
-       tb
+       body body* ...
+
        (def-label sym-end)))))
 
+(define-syntax %while
+  (syntax-rules ()
+    ((_ pred body body* ...)
+     (let* ((lhs (eval (car 'pred)))
+	    (op  (cadr 'pred))
+	    (rhs (eval (caddr 'pred)))
+	    (n   (next-unique))
+	    (sym-test (string->symbol (format "~A-test" n)))
+	    (sym-end  (string->symbol (format "~A-end"  n))))
+       (ld *macro-scratch-reg* lhs)
+
+       (def-label sym-test)
+       (emit-inverted-test *macro-scratch-reg* op rhs sym-end)
+
+       body body* ...
+
+       (ld PC (label sym-test))
+       (def-label sym-end)))))
+
+(define *procedures* '())
+
+(define-syntax %def-proc
+  (syntax-rules ()
+    ((_ name params* ...)
+     (set! *procedures*
+       (cons (list 'name 'params* ...) *procedures*)))))
+
+(define-syntax %call
+  (syntax-rules ()
+    ((_ name args* ...)
+     (let* ((params  (or (assocdr 'name *procedures*)
+		        (error "proc not defined" 'name)))
+	    (args    (list args* ...))
+	    (n       (next-unique))
+	    (sym-ret (string->symbol (format "~A-ret" n))))
+
+       (unless (= (length params) (length args))
+	 (error (format "incorrect args, expected ~A, got ~A" params args)))
+
+       (let loop ((i 0))
+	 (when (< i (length args))
+	   (let* ((rn (reg i)))
+	     (ld rn (list-ref args i)))
+	   (loop (+ 1 i))))
+
+       (st SP (label sym-ret) push: #t)
+       (ld PC (label 'name))
+       (def-label sym-ret)
+       ))))
