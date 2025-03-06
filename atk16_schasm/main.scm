@@ -1,5 +1,3 @@
-(import (chicken base))
-
 (load "core.scm")
 (load "macros.scm")
 
@@ -47,13 +45,13 @@
 (def-label 'branch-true
   (emit-word 2))
 
-;; use macros like %if, %while for convenience
+;; use macros like %if-else, %when, %while for convenience
 (let ((x #x5678))
   (%if-else (R1 == R2)
 	    (emit-word #x1234)
 	    (emit-word x)))
 
-(%if (R1 <= (u16 #xFF))
+(%when (R1 <= (u16 #xFF))
      (emit-word #xbeef))
 
 ;; procedure declarations

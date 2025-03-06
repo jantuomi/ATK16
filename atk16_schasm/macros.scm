@@ -70,7 +70,7 @@
        fb
        (def-label sym-end)))))
 
-(define-syntax %if
+(define-syntax %when
   (syntax-rules ()
     ((_ pred body body* ...)
      (let* ((lhs  (eval (car 'pred)))
