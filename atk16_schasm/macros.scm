@@ -2,7 +2,7 @@
 
 (define *unique-counter* 0)
 (define (next-unique)
-  (set! *unique-counter* (+ 1 *unique-counter*))
+  (inc! *unique-counter*)
   *unique-counter*)
 (define *macro-scratch-reg* R12)
 
@@ -54,9 +54,9 @@
 (define-syntax %if-else
   (syntax-rules ()
     ((_ pred tb fb)
-     (let* ((lhs  (eval (car 'pred)))
+     (let* ((lhs  (eval (car `pred)))
 	    (op   (cadr 'pred))
-	    (rhs  (eval (caddr 'pred)))
+	    (rhs  (eval (caddr `pred)))
 	    (n    (next-unique))
 	    (sym-false (string->symbol (format "~A-false" n)))
 	    (sym-end   (string->symbol (format "~A-end"   n))))
@@ -73,9 +73,9 @@
 (define-syntax %when
   (syntax-rules ()
     ((_ pred body body* ...)
-     (let* ((lhs  (eval (car 'pred)))
+     (let* ((lhs  (eval (car `pred)))
 	    (op   (cadr 'pred))
-	    (rhs  (eval (caddr 'pred)))
+	    (rhs  (eval (caddr `pred)))
 	    (n    (next-unique))
 	    (sym-end   (string->symbol (format "~A-end"   n))))
        (ld *macro-scratch-reg* lhs)
@@ -89,9 +89,9 @@
 (define-syntax %while
   (syntax-rules ()
     ((_ pred body body* ...)
-     (let* ((lhs (eval (car 'pred)))
+     (let* ((lhs (eval (car `pred)))
 	    (op  (cadr 'pred))
-	    (rhs (eval (caddr 'pred)))
+	    (rhs (eval (caddr `pred)))
 	    (n   (next-unique))
 	    (sym-test (string->symbol (format "~A-test" n)))
 	    (sym-end  (string->symbol (format "~A-end"  n))))
@@ -107,17 +107,38 @@
 
 (define *procedures* '())
 
+(define-syntax %decl-proc
+  (syntax-rules ()
+    ((_ signature)
+     (set! *procedures*
+       (cons `signature *procedures*))
+     )))
+
+(define *proc-scope* (make-parameter #f))
+
+(define (param pname)
+  (or (assocdr pname (*proc-scope*))
+      (error "no such param" pname)))
+
 (define-syntax %def-proc
   (syntax-rules ()
-    ((_ name params* ...)
-     (set! *procedures*
-       (cons (list 'name 'params* ...) *procedures*)))))
+    ((_ signature body* ...)
+     (let* ((name     (car `signature))
+	    (params   (cdr `signature))
+	    (bindings (zip params
+                           (map (@ reg) (iota (length params) 0)))))
+       (%decl-proc signature)
+       (print name)
+       (def-label name)
+       (parameterize ((*proc-scope* bindings))
+	 body* ...)
+       ))))
 
 (define-syntax %call
   (syntax-rules ()
     ((_ name args* ...)
      (let* ((params  (or (assocdr 'name *procedures*)
-		        (error "proc not defined" 'name)))
+			 (error "proc not defined" 'name)))
 	    (args    (list args* ...))
 	    (n       (next-unique))
 	    (sym-ret (string->symbol (format "~A-ret" n))))

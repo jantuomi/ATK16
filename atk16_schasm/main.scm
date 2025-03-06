@@ -54,11 +54,9 @@
 (%when (R1 <= (u16 #xFF))
      (emit-word #xbeef))
 
-;; procedure declarations
-(%def-proc println str)
-(def-label 'println
-  ;; R0 := str
-  ;; ...
+;; procedures
+(%def-proc (println *str)
+  (param '*str) ;; => R0
   (ld PC SP pop: #t indirect: 1))
 
 ;; procedure calls

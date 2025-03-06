@@ -1,7 +1,8 @@
 (import (chicken base)
 	(chicken bitwise)
 	(chicken format)
-	(chicken io))
+	(chicken io)
+	(only srfi-1 iota))
 
 ;; Utils
 
@@ -15,6 +16,12 @@
     ((_ fn-body expr ...)
      (lambda (x) (fn-body expr ... x)))))
 
+(define (zip alist blist)
+  (if (null? alist)
+      '()
+      ;; else, cons and recurse
+      (cons (cons (car alist) (car blist)) (zip (cdr alist) (cdr blist)))))
+
 (define (type-of pair)
   (if (pair? pair) (car pair) (error "not a pair" pair)))
 (define (val-of pair)
@@ -26,6 +33,19 @@
 (define (assocdr k alist)
   (let ((v (assoc k alist)))
     (and v (cdr v))))
+
+(define-syntax inc!
+  (syntax-rules ()
+    ((_ n)
+     (set! n (+ n 1)))
+    ((_ n m)
+     (set! n (+ n m)))))
+(define-syntax sub!
+  (syntax-rules ()
+    ((_ n)
+     (set! n (- n 1)))
+    ((_ n m)
+     (set! n (- n m)))))
 
 (define (string->ascii-list s)
   (let* ((len (string-length s))
