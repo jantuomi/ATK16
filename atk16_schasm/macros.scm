@@ -4,7 +4,7 @@
 (define (next-unique)
   (inc! *unique-counter*)
   *unique-counter*)
-(define *macro-scratch-reg* R12)
+(define *macro-scratch-reg* R11)
 
 (define (%packed-string s)
   ;; emit length
@@ -65,7 +65,7 @@
        (emit-inverted-test *macro-scratch-reg* op rhs sym-false)
 
        tb
-       (ld PC (label sym-end))
+       (ld PC ZR (label sym-end))
        (def-label sym-false)
        fb
        (def-label sym-end)))))
@@ -102,7 +102,7 @@
 
        body body* ...
 
-       (ld PC (label sym-test))
+       (ld PC ZR (label sym-test))
        (def-label sym-end)))))
 
 (define *procedures* '())
@@ -127,7 +127,7 @@
     ((_ pname)
      (param 'pname))))
 
-(define-syntax %def-proc
+(define-syntax %proc
   (syntax-rules ()
     ((_ signature body* ...)
      (let* ((name     (car `signature))
@@ -141,6 +141,7 @@
        (def-label name)
        (parameterize ((*proc-scope* bindings))
 	 body* ...)
+       (ld PC SP #f preinc: #t indirect: 1)
        ))))
 
 (define-syntax %call
@@ -171,12 +172,22 @@
 
 	   ;; move each argument to its designated register
 	   ;; first arg to R0, etc.
-	   (let* ((rn (reg i)))
-	     (ld rn (list-ref args i)))
+	   (let* ((rn    (reg i))
+		  (argi  (list-ref args i))
+		  (itype (type-of argi)))
+	     (cond
+	      ((eq? 'reg itype)
+	       (ld rn argi))
+	      ((or (eq? 'imm itype)
+		   (eq? 'label itype))
+	       (ld rn ZR argi))
+	      (else (error "invalid argument" argi))))
 	   (loop (+ 1 i))))
 
-       (st SP (label sym-ret) push: #t)
-       (ld PC (label `name))
+       (ld *macro-scratch-reg* ZR (label sym-ret))
+       (st *macro-scratch-reg* SP #f postdec: #t)
+       
+       (ld PC ZR (label `name))
        (def-label sym-ret)
        ))))
 

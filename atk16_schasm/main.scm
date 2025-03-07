@@ -8,7 +8,7 @@
 (emit-word #x1234)
 
 ;; compile instructions
-(ld SP (u16 0))
+(ld SP ZR (u16 0))
 
 ;; set labels
 (def-label 'some-data
@@ -22,13 +22,13 @@
   (add R3 (u16 #xFF)))
 
 ;; abs jump
-(ld PC (label 'main))
+(ld PC ZR (label 'main))
 
 ;; rel jump
 (add PC (i16 10))
 
 ;; jump forward to a currently undefined label
-(ld PC (label 'forward))
+(ld PC ZR (label 'forward))
 (def-label 'forward
   (hlt))
 
@@ -52,15 +52,21 @@
 	    (emit-word x)))
 
 (%when (R1 <= (u16 #xFF))
-     (emit-word #xbeef))
+       (emit-word #xbeef))
 
 ;; procedures
-(%def-proc (println *str)
-  (param '*str) ;; => R0
-  (ld PC SP pop: #t indirect: 1))
+(%proc (println *str)
+
+       (%param *str) ;; => evaluates to R0
+       ;;(%svar x 1)   ;; allocate a word on the stack
+       ;;(%svar y 1)   ;; allocate another word on the stack
+       ;;(%soffset y)  ;; => evaluates to frame offset 1
+
+       ;; %proc epilogue fees the %svars
+       )
 
 ;; procedure calls
-(ld R1 (u16 10))
+(ld R1 ZR (u16 10))
 (%while (R1 > (u16 0))
 	(%call println (label 'text-data))
 	(sub R1 (u16 1)))

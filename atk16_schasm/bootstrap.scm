@@ -17,7 +17,7 @@
   ;; Set stack pointer to end of heap segment, i.e. one below addr-segment-mmio.
   ;; Stack grows down.
   ;; Heap grows up from addr-segment-heap until it meets the stack.
-  (ld SP (u16 (- addr-segment-mmio 1)))
+  (ld SP ZR (u16 (- addr-segment-mmio 1)))
   ;; Set graphics mode to disabled.
-  (ld R0 (u16 addr-mmio-graphics-mode))
-  (st R0 (u16 graphics-disabled)))
+  (ld R0 ZR (u16 addr-mmio-graphics-mode))
+  (st R0 ZR (u16 graphics-disabled)))

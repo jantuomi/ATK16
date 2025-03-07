@@ -132,7 +132,7 @@
 (define (emit-byte b)
   (unless (and (>= b 0)
 	       (<  b (expt 2 8)))
-    (error "value out of bounds" byte))
+    (error "value out of bounds" b))
 
   (emit-byte-chunks `(8 . ,b)))
 
@@ -186,25 +186,34 @@
    ((or (< n 0) (>= n 16)) (error "invalid arg to reg" n))
    (else (cons 'reg n))))
 
+;; R0..R5 caller saved arguments, generic
+;; R0 return value register
 (define R0  (reg 0))
 (define R1  (reg 1))
 (define R2  (reg 2))
 (define R3  (reg 3))
 (define R4  (reg 4))
 (define R5  (reg 5))
+;; R6..R11 callee saved arguments, generic
 (define R6  (reg 6))
 (define R7  (reg 7))
 (define R8  (reg 8))
 (define R9  (reg 9))
 (define R10 (reg 10))
 (define R11 (reg 11))
+;; Special (see below)
 (define R12 (reg 12))
 (define R13 (reg 13))
 (define R14 (reg 14))
 (define R15 (reg 15))
 
+;; Zero register (hardwired to 0)
+(define ZR (reg 12))
+;; Flag register (only lowest 4 bits set by ALU)
 (define FL (reg 13))
+;; Program counter
 (define PC (reg 14))
+;; Stack pointer
 (define SP (reg 15))
 
 (define (imm n)
@@ -271,6 +280,9 @@
   (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
 
   (define rhs-type (type-of rhs))
+  ;; Addressing modes
+  ;; 0: reg        (1 word)
+  ;; 1: reg + word (2 words)
   (define m-mode
     (cond ((eq? 'reg rhs-type)   0)
 	  ((eq? 'imm rhs-type)   1)
@@ -310,81 +322,86 @@
 (define (shr lhs rhs) (alu (alu-op 6) lhs rhs))
 (define (sar lhs rhs) (alu (alu-op 7) lhs rhs))
 
-(define (ld lhs rhs #!key (indirect 0) (pop #f))
-  (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
+;; Load data to to-reg from memory pointed by from-reg + offset.
+;; With indirect = 0, copies the value from-reg + offset to to-reg without memory access.
+(define (ld to-reg from-reg #!optional offset #!key (indirect 0) (preinc #f))
+  (unless (eq? 'reg (type-of to-reg)) (error "invalid target register" to-reg))
+  (unless (eq? 'reg (type-of from-reg)) (error "invalid source register" from-reg))
+  (unless (or (not offset)
+	      (eq? 'imm (type-of offset))
+	      (eq? 'label (type-of offset)))
+    (error "invalid offset" offset))
+  (unless (and (number? indirect)
+	       (>= indirect 0)
+	       (<  indirect 4))
+    (error "invalid indirect" indirect))
+  (unless (boolean? preinc) (error "invalid preinc" preinc))
 
-  (define p-mode (if pop 1 0))
+  ;; Addressing modes
+  ;; 0: reg                      (1 word)
+  ;; 1: reg, preincrement        (1 word)
+  ;; 2: reg + word               (2 words)
+  ;; 3: reg + word, preincrement (2 words)
+  (define m-mode (if offset 1 0))
+  (define p-mode (if preinc 1 0))
 
-  (define rhs-type (type-of rhs))
-  (define m-mode
-    (cond ((eq? 'reg rhs-type)   0)
-	  ((eq? 'imm rhs-type)   1)
-	  ((eq? 'label rhs-type) 1)
-	  (else (error "invalid rhs" rhs))))
+  (emit-byte-chunks `(4 . 2)
+		    `(2 . ,indirect)
+		    `(1 . ,m-mode)
+		    `(1 . ,p-mode))
+  (emit-byte-chunks `(4 . ,(val-of to-reg))
+		    `(4 . ,(val-of from-reg)))
 
-  (if (= m-mode 0)
-      ;; reg mode
-      (begin
-	(emit-byte-chunks `(4 . 2)
-			  `(2 . ,indirect)
-			  `(1 . ,p-mode)
-			  `(1 . ,m-mode))
-	(emit-byte-chunks `(4 . ,(val-of lhs))
-			  `(4 . ,(val-of rhs))))
+  (cond
+   ;; in reg+word mode, if label, emit a label reference
+   ((and offset (eq? 'label (type-of offset)))
+    (emit-deferred-sexpr `(label . (hi ,(val-of offset))))
+    (emit-deferred-sexpr `(label . (lo ,(val-of offset)))))
+   ;; in reg+word mode, if imm, emit the value
+   ((and offset (eq? 'imm (type-of offset)))
+    (emit-word (val-of offset)))
+   (offset
+    (error "invalid offset in reg+word addressing mode" offset))))
 
-      ;; immediate mode
-      (begin
-	(emit-byte-chunks `(4 . 2)
-			  `(2 . ,indirect)
-			  `(1 . ,p-mode)
-			  `(1 . ,m-mode))
-	(emit-byte-chunks `(4 . ,(val-of lhs))
-			  `(4 . 0))
+;; Store data in from-reg to memory pointed by to-reg + offset.
+(define (st from-reg to-reg #!optional offset #!key (indirect 1) (postdec #f))
+  (unless (eq? 'reg (type-of to-reg)) (error "invalid target register" to-reg))
+  (unless (eq? 'reg (type-of from-reg)) (error "invalid source register" from-reg))
+  (unless (or (not offset)
+	      (eq? 'imm (type-of offset))
+	      (eq? 'label (type-of offset)))
+    (error "invalid offset" offset))
+  (unless (and (number? indirect)
+	       (>= indirect 1)
+	       (<  indirect 4))
+    (error "invalid indirect" indirect))
+  (unless (boolean? postdec) (error "invalid postdec" postdec))
 
-	(if (eq? 'label rhs-type)
-	    ;; if label, emit a label reference
-	    (begin (emit-deferred-sexpr `(label . (hi ,(val-of rhs))))
-		   (emit-deferred-sexpr `(label . (lo ,(val-of rhs)))))
-	    ;; otherwise, emit the value
-	    (emit-word (val-of rhs))))))
+  ;; Addressing modes
+  ;; 0: reg                       (1 word)
+  ;; 1: reg, postdecrement        (1 word)
+  ;; 2: reg + word                (2 words)
+  ;; 3: reg + word, postdecrement (2 words)
+  (define m-mode (if offset  1 0))
+  (define p-mode (if postdec 1 0))
 
-(define (st lhs rhs #!key (indirect 0) (push #f))
-  (unless (eq? 'reg (type-of lhs)) (error "invalid lhs" lhs))
+  (emit-byte-chunks `(4 . 4)
+		    `(2 . ,indirect)
+		    `(1 . ,m-mode)
+		    `(1 . ,p-mode))
+  (emit-byte-chunks `(4 . ,(val-of from-reg))
+		    `(4 . ,(val-of to-reg)))
 
-  (define p-mode (if push 1 0))
-
-  (define rhs-type (type-of rhs))
-  (define m-mode
-    (cond ((eq? 'reg rhs-type)   0)
-	  ((eq? 'imm rhs-type)   1)
-	  ((eq? 'label rhs-type) 1)
-	  (else (error "invalid rhs" rhs))))
-
-  (if (= m-mode 0)
-      ;; reg mode
-      (begin
-	(emit-byte-chunks `(4 . 4)
-			  `(2 . ,indirect)
-			  `(1 . ,p-mode)
-			  `(1 . ,m-mode))
-	(emit-byte-chunks `(4 . ,(val-of lhs))
-			  `(4 . ,(val-of rhs))))
-
-      ;; immediate mode
-      (begin
-	(emit-byte-chunks `(4 . 4)
-			  `(2 . ,indirect)
-			  `(1 . ,p-mode)
-			  `(1 . ,m-mode))
-	(emit-byte-chunks `(4 . ,(val-of lhs))
-			  `(4 . 0))
-
-	(if (eq? 'label rhs-type)
-	    ;; if label, emit a label reference
-	    (begin (emit-deferred-sexpr `(label . (hi ,(val-of rhs))))
-		   (emit-deferred-sexpr `(label . (lo ,(val-of rhs)))))
-	    ;; otherwise, emit the value
-	    (emit-word (val-of rhs))))))
+  (cond
+   ;; in reg+word mode, if label, emit a label reference
+   ((and offset (eq? 'label (type-of offset)))
+    (emit-deferred-sexpr `(label . (hi ,(val-of offset))))
+    (emit-deferred-sexpr `(label . (lo ,(val-of offset)))))
+   ;; in reg+word mode, if imm, emit the value
+   ((and offset (eq? 'imm (type-of offset)))
+    (emit-word (val-of offset)))
+   (offset
+    (error "invalid offset in reg+word addressing mode" offset))))
 
 (define (br flag offset #!key (asserted #t))
   (unless (eq? 'flag (type-of flag)) (error "invalid flag selector" flag))
@@ -404,7 +421,7 @@
 			`(2 . ,(val-of flag))
 			`(1 . 0)
 			`(1 . ,set))
-      (emit `(8 . ,imm))))
+      (emit-byte `(8 . ,imm))))
    ((eq? 'label offset-type)
     (emit-byte-chunks `(4 . 5)
 		      `(2 . ,(val-of flag))
