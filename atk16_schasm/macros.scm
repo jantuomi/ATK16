@@ -18,21 +18,21 @@
 (define-syntax emit-test-eq
   (syntax-rules ()
     ((_ lhs rhs dest set)
-     (begin (sub lhs rhs)
-	    (br flag-zero (label dest) set: set)))))
+     (begin (%sub lhs rhs)
+	    (%br flag-zero (label dest) #:asserted set)))))
 
 (define-syntax emit-test-lt
   (syntax-rules ()
     ((_ lhs rhs dest set)
-     (begin (sub lhs rhs)
-	    (br flag-sign (label dest) set: set)))))
+     (begin (%sub lhs rhs)
+	    (%br flag-sign (label dest) #:asserted set)))))
 
 (define-syntax emit-test-lte
   (syntax-rules ()
     ((_ lhs rhs dest set)
-     (begin (sub lhs rhs)
-	    (sub lhs (u16 1))
-	    (br flag-sign (label dest) set: set)))))
+     (begin (%sub lhs rhs)
+	    (%sub lhs ZR (u16 1))
+	    (%br flag-sign (label dest) #:asserted set)))))
 
 (define-syntax emit-inverted-test
   ;; jump to dest if <lhs op rhs> is NOT true.
@@ -60,12 +60,12 @@
 	    (n    (next-unique))
 	    (sym-false (string->symbol (format "~A-false" n)))
 	    (sym-end   (string->symbol (format "~A-end"   n))))
-       (ld *macro-scratch-reg* lhs)
+       (%ld *macro-scratch-reg* lhs)
 
        (emit-inverted-test *macro-scratch-reg* op rhs sym-false)
 
        tb
-       (ld PC ZR (label sym-end))
+       (%ld PC ZR (label sym-end))
        (def-label sym-false)
        fb
        (def-label sym-end)))))
@@ -78,7 +78,7 @@
 	    (rhs  (eval (caddr `pred)))
 	    (n    (next-unique))
 	    (sym-end   (string->symbol (format "~A-end"   n))))
-       (ld *macro-scratch-reg* lhs)
+       (%ld *macro-scratch-reg* lhs)
 
        (emit-inverted-test *macro-scratch-reg* op rhs sym-end)
 
@@ -95,19 +95,19 @@
 	    (n   (next-unique))
 	    (sym-test (string->symbol (format "~A-test" n)))
 	    (sym-end  (string->symbol (format "~A-end"  n))))
-       (ld *macro-scratch-reg* lhs)
+       (%ld *macro-scratch-reg* lhs)
 
        (def-label sym-test)
        (emit-inverted-test *macro-scratch-reg* op rhs sym-end)
 
        body body* ...
 
-       (ld PC ZR (label sym-test))
+       (%ld PC ZR (label sym-test))
        (def-label sym-end)))))
 
 (define *procedures* '())
 
-(define-syntax %decl-proc
+(define-syntax decl-proc
   (syntax-rules ()
     ((_ signature)
      (set! *procedures*
@@ -137,11 +137,11 @@
 	    (n-max-params 12))
        (unless (<= (length params) n-max-params)
 	 (error (format "proc has too many params (~A > ~A)" (length params) n-max-params)))
-       (%decl-proc signature)
+       (decl-proc signature)
        (def-label name)
        (parameterize ((*proc-scope* bindings))
 	 body* ...)
-       (ld PC SP #f preinc: #t indirect: 1)
+       (%ld PC SP #f preinc: #t indirect: 1)
        ))))
 
 (define-syntax %call
@@ -177,29 +177,29 @@
 		  (itype (type-of argi)))
 	     (cond
 	      ((eq? 'reg itype)
-	       (ld rn argi))
+	       (%ld rn argi))
 	      ((or (eq? 'imm itype)
 		   (eq? 'label itype))
-	       (ld rn ZR argi))
+	       (%ld rn ZR argi))
 	      (else (error "invalid argument" argi))))
 	   (loop (+ 1 i))))
 
-       (ld *macro-scratch-reg* ZR (label sym-ret))
-       (st *macro-scratch-reg* SP #f postdec: #t)
+       (%ld *macro-scratch-reg* ZR (label sym-ret))
+       (%st *macro-scratch-reg* SP #f #:postdec #t)
        
-       (ld PC ZR (label `name))
+       (%ld PC ZR (label `name))
        (def-label sym-ret)
        ))))
 
 (define (spush datum)
   (cond
    ((eq? 'reg (type-of datum))
-    (st datum SP push: #t))
+    (%st datum SP #:postdec #t))
    (else
-    (ld *macro-scratch-reg* datum)
-    (st *macro-scratch-reg* SP push: #t indirect: 1))))
+    (%ld *macro-scratch-reg* datum)
+    (%st *macro-scratch-reg* SP #:postdec #t #:indirect 1))))
 
 (define (spop reg)
   (unless (eq? 'reg (type-of reg))
     (error "not a register" reg))
-  (ld reg SP pop: #t indirect: 1))
+  (%ld reg SP #:preinc #t #:indirect 1))

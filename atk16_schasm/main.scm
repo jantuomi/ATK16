@@ -8,7 +8,7 @@
 (emit-word #x1234)
 
 ;; compile instructions
-(ld SP ZR (u16 0))
+(%ld SP ZR (u16 0))
 
 ;; set labels
 (def-label 'some-data
@@ -18,19 +18,19 @@
 ;; set the current emit address
 (at-addr #x20)
 (def-label 'main
-  (add R1 R2)
-  (add R3 (u16 #xFF)))
+  (%add R1 R2)
+  (%add R3 (u16 #xFE)))
 
 ;; abs jump
-(ld PC ZR (label 'main))
+(%ld PC (label 'main))
 
 ;; rel jump
-(add PC (i16 10))
+(%add PC (i16 10))
 
 ;; jump forward to a currently undefined label
-(ld PC ZR (label 'forward))
+(%ld PC (label 'forward))
 (def-label 'forward
-  (hlt))
+  (%hlt))
 
 ;; store string data in memory
 (def-label 'text-data
@@ -39,7 +39,7 @@
 (at-addr #x50)
 
 ;; branch based on an ALU flag
-(br flag-carry (label 'branch-true) set: #t)
+(%br flag-carry (label 'branch-true) #:asserted #t)
 (def-label 'branch-false
   (emit-word 1))
 (def-label 'branch-true
@@ -66,10 +66,10 @@
        )
 
 ;; procedure calls
-(ld R1 ZR (u16 10))
+(%ld R1 (u16 10))
 (%while (R1 > (u16 0))
 	(%call println (label 'text-data))
-	(sub R1 (u16 1)))
+	(%sub R1 (u16 1)))
 
 ;; compile to a 128KB image file
 (write-image-to "out.bin")
