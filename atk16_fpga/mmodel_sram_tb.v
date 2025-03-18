@@ -2,14 +2,14 @@
 `define DUMPSTR(x) `"x.vcd`"
 `timescale 1 ns / 100 ps
 
-module sram_tb();
+module sram_tb ();
 
     reg clk, cs_n, wr_n, rd_n;
-    reg [17:0] addr;
-    reg [15:0] data_in;
+    reg  [17:0] addr;
+    reg  [15:0] data_in;
     wire [15:0] data_out;
 
-    sram dut(
+    mmodel_sram dut (
         .cs_n(cs_n),
         .wr_n(wr_n),
         .rd_n(rd_n),
@@ -44,7 +44,9 @@ module sram_tb();
         if (debug_mem100 === 16'hx) begin
             $display("\033[0;32m[PASS]\033[0m Write: data is invalid at time: %0d ns", $time);
         end else begin
-            $display("\033[0;31m[FAIL]\033[0m Write: data is valid too early, got %04h at time %0d ns", debug_mem100, $time);
+            $display(
+                "\033[0;31m[FAIL]\033[0m Write: data is valid too early, got %04h at time %0d ns",
+                debug_mem100, $time);
             failed = 1;
         end
 
@@ -69,7 +71,9 @@ module sram_tb();
         if (data_out === 16'hx) begin
             $display("\033[0;32m[PASS]\033[0m Read: data is invalid at time: %0d ns", $time);
         end else begin
-            $display("\033[0;31m[FAIL]\033[0m Read: data is valid too early, got %04h at time %0d ns", data_out, $time);
+            $display(
+                "\033[0;31m[FAIL]\033[0m Read: data is valid too early, got %04h at time %0d ns",
+                data_out, $time);
             failed = 1;
         end
 

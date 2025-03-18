@@ -8,6 +8,10 @@ set_io -nowarn SYSCLK J3 # GBIN6
 set_io -nowarn LED1 M12
 set_io -nowarn LED2 R16
 
+# USB<->Serial interface
+set_io -nowarn SERIAL_TX E4
+set_io -nowarn SERIAL_RX B2
+
 # Buttons
 set_io -nowarn BUT1 K11
 set_io -nowarn BUT2 P13
@@ -25,9 +29,9 @@ set_io -nowarn RxD L11
 set_io -nowarn TxD T16
 
 # SRAM
-set_io -nowarn SRAM_CS T6
-set_io -nowarn SRAM_OE L9
-set_io -nowarn SRAM_WE T7
+set_io -nowarn SRAM_CS T6 # the schematic says these are inverted
+set_io -nowarn SRAM_OE L9 # but testing says that they are not
+set_io -nowarn SRAM_WE T7 # very weird.
 set_io -nowarn SA[0] N6
 set_io -nowarn SA[1] T1
 set_io -nowarn SA[2] P4
