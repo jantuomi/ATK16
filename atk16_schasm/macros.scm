@@ -4,7 +4,6 @@
 (define (next-unique)
   (inc! *unique-counter*)
   *unique-counter*)
-(define *macro-scratch-reg* R11)
 
 (define (%packed-string s)
   ;; emit length
@@ -60,12 +59,12 @@
 	    (n    (next-unique))
 	    (sym-false (string->symbol (format "~A-false" n)))
 	    (sym-end   (string->symbol (format "~A-end"   n))))
-       (%ld *macro-scratch-reg* lhs)
+       (%ld TMP lhs)
 
-       (emit-inverted-test *macro-scratch-reg* op rhs sym-false)
+       (emit-inverted-test TMP op rhs sym-false)
 
        tb
-       (%ld PC ZR (label sym-end))
+       (%ld PC (label sym-end))
        (def-label sym-false)
        fb
        (def-label sym-end)))))
@@ -78,9 +77,9 @@
 	    (rhs  (eval (caddr `pred)))
 	    (n    (next-unique))
 	    (sym-end   (string->symbol (format "~A-end"   n))))
-       (%ld *macro-scratch-reg* lhs)
+       (%ld TMP lhs)
 
-       (emit-inverted-test *macro-scratch-reg* op rhs sym-end)
+       (emit-inverted-test TMP op rhs sym-end)
 
        body body* ...
 
@@ -95,15 +94,79 @@
 	    (n   (next-unique))
 	    (sym-test (string->symbol (format "~A-test" n)))
 	    (sym-end  (string->symbol (format "~A-end"  n))))
-       (%ld *macro-scratch-reg* lhs)
+       (%ld TMP lhs)
 
        (def-label sym-test)
-       (emit-inverted-test *macro-scratch-reg* op rhs sym-end)
+       (emit-inverted-test TMP op rhs sym-end)
 
        body body* ...
 
        (%ld PC ZR (label sym-test))
        (def-label sym-end)))))
+
+;; Stack push and pop
+
+(define (%spush word)
+  (cond
+   ((eq? 'reg (type-of word))
+    (%st word SP #:postdec #t))
+   (else
+    (%ld TMP word)
+    (%st TMP SP #:postdec #t #:indirect 1))))
+
+(define (%spop reg)
+  (unless (eq? 'reg (type-of reg))
+    (error "not a register" reg))
+  (%ld reg SP #:preinc #t #:indirect 1))
+
+;; Stack variables and parameter registers
+
+(define *params*   '())
+(define *soffsets* '())
+(define *ssizes*   '())
+(define *proc?*    #f)
+
+(define (get-param name)
+  (or (assocdr name *params*)
+      (error "no such param" name)))
+
+(define (get-soffset name)
+  (or (assocdr name *soffsets*)
+      (error "no such svar" name)))
+
+(define (get-ssize name)
+  (or (assocdr name *ssizes*)
+      (error "no such svar" name)))
+
+(define-syntax param
+  (syntax-rules ()
+    ((_ name)
+     (get-param `name))))
+
+(define-syntax soffset
+  (syntax-rules ()
+    ((_ name)
+     (get-soffset `name))))
+
+(define-syntax ssize
+  (syntax-rules ()
+    ((_ name)
+     (get-ssize `name))))
+
+(define (svars-size)
+  (apply + (map (@ cdr) *ssizes*)))
+
+(define (def-svar name size)
+  (set! *soffsets* (cons `(,name . ,(svars-size)) *soffsets*))
+  (set! *ssizes*   (cons `(,name . ,size)         *ssizes*))
+  (%sub SP (u16 size)))
+
+(define-syntax %svar
+  (syntax-rules ()
+    ((_ name size)
+     (def-svar `name size))))
+
+;; Procedure definitions and calls
 
 (define *procedures* '())
 
@@ -114,18 +177,18 @@
        (cons `signature *procedures*))
      )))
 
-(define *proc-scope* (make-parameter #f))
+(define (%return #!optional word)
+  ;; Load word into R0 (return value register)
+  (when word
+    (%ld R0 word))
 
-(define (param pname)
-  (let* ((scope (or (*proc-scope*)
-		    (error "cannot use params outside a procedure context"))))
-    (or (assocdr pname (*proc-scope*))
-	(error "no such param" pname))))
+  ;; Free up stack memory that was used in this proc
+  ;; by setting SP to base pointer
+  (%ld SP BP)
 
-(define-syntax %param
-  (syntax-rules ()
-    ((_ pname)
-     (param 'pname))))
+  ;; Pop the base pointer and return address from the stack
+  (%spop BP)
+  (%spop PC))
 
 (define-syntax %proc
   (syntax-rules ()
@@ -137,11 +200,27 @@
 	    (n-max-params 12))
        (unless (<= (length params) n-max-params)
 	 (error (format "proc has too many params (~A > ~A)" (length params) n-max-params)))
+
+       (unless (not *proc?*)
+	 (error "nested procs not supported" name))
+
        (decl-proc signature)
        (def-label name)
-       (parameterize ((*proc-scope* bindings))
-	 body* ...)
-       (%ld PC SP #f preinc: #t indirect: 1)
+
+       (define old-offsets *soffsets*)
+       (define old-sizes   *ssizes*)
+       (set! *soffsets* '())
+       (set! *ssizes*   '())
+       (set! *proc?*    #t)
+       (set! *params*   bindings)
+
+       body* ...
+
+       (%return)
+
+       (set! *soffsets* old-offsets)
+       (set! *ssizes*   old-sizes)
+       (set! *proc?* #f)
        ))))
 
 (define-syntax %call
@@ -184,22 +263,16 @@
 	      (else (error "invalid argument" argi))))
 	   (loop (+ 1 i))))
 
-       (%ld *macro-scratch-reg* ZR (label sym-ret))
-       (%st *macro-scratch-reg* SP #f #:postdec #t)
-       
-       (%ld PC ZR (label `name))
+       ;; Push the return address and base pointer to the stack
+       (%spush (label sym-ret))
+       (%spush BP)
+
+       ;; Update base pointer to current stack pointer
+       (%ld BP SP)
+
+       ;; Jump to the procedure address
+       (%ld PC (label `name))
+
+       ;; Define the return address
        (def-label sym-ret)
        ))))
-
-(define (spush datum)
-  (cond
-   ((eq? 'reg (type-of datum))
-    (%st datum SP #:postdec #t))
-   (else
-    (%ld *macro-scratch-reg* datum)
-    (%st *macro-scratch-reg* SP #:postdec #t #:indirect 1))))
-
-(define (spop reg)
-  (unless (eq? 'reg (type-of reg))
-    (error "not a register" reg))
-  (%ld reg SP #:preinc #t #:indirect 1))

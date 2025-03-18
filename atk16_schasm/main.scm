@@ -57,10 +57,10 @@
 ;; procedures
 (%proc (println *str)
 
-       (%param *str) ;; => evaluates to R0
-       ;;(%svar x 1)   ;; allocate a word on the stack
-       ;;(%svar y 1)   ;; allocate another word on the stack
-       ;;(%soffset y)  ;; => evaluates to frame offset 1
+       (%ld R3 (param *str)) ;; => evaluates to R0
+       (%svar x 1)   ;; allocate a word on the stack
+       (%svar y 1)   ;; allocate another word on the stack
+       (%ld R2 (u16 (soffset y)))  ;; => evaluates to frame offset 1
 
        ;; %proc epilogue fees the %svars
        )

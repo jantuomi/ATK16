@@ -41,8 +41,8 @@
   (unless (<= (length offsets) 1)
     (error "only one imm or label can be supplied as rhs"))
 
-  (define rhs    (if (null? regs)    ZR      (car regs)))
-  (define offset (if (null? offsets) (imm 0) (car offsets)))
+  (define rhs    (if (null? regs)    ZR (car regs)))
+  (define offset (if (null? offsets) #f (car offsets)))
 
   (cons rhs offset))
 

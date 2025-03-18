@@ -105,21 +105,16 @@
 
 ;; Directives
 
-(begin
-  (define (def-label-fn sym)
-    (when (assoc sym *labels*)
-      (error "label already defined" sym))
+(define-syntax def-label
+  (syntax-rules ()
+    ((_ sym exprs* ...)
+     (begin
+       (when (assoc sym *labels*)
+	 (error "label already defined" sym))
 
-    (set! *labels* (cons (cons sym *cursor*) *labels*))
-    )
-  (define-syntax def-label
-    (syntax-rules ()
-      ((_ sym exprs* ...)
-       (begin
-	 (def-label-fn sym)
-	 exprs* ...))))
+       (set! *labels* (cons (cons sym *cursor*) *labels*))
 
-  )
+       exprs* ...))))
 
 (define-syntax at-addr
   (syntax-rules ()
@@ -152,25 +147,29 @@
 (define R3  (reg 3))
 (define R4  (reg 4))
 (define R5  (reg 5))
-;; R6..R11 callee saved arguments, generic
+;; R6..R9 callee saved arguments, generic
 (define R6  (reg 6))
 (define R7  (reg 7))
 (define R8  (reg 8))
 (define R9  (reg 9))
+;; Special (see below)
 (define R10 (reg 10))
 (define R11 (reg 11))
-;; Special (see below)
 (define R12 (reg 12))
 (define R13 (reg 13))
 (define R14 (reg 14))
 (define R15 (reg 15))
 
+;; Assembler temp register (clobbered in some macros)
+(define TMP (reg 10))
 ;; Zero register (hardwired to 0)
-(define ZR (reg 12))
+(define ZR (reg 11))
 ;; Flag register (only lowest 4 bits set by ALU)
-(define FL (reg 13))
+(define FL (reg 12))
 ;; Program counter
-(define PC (reg 14))
+(define PC (reg 13))
+;; Base pointer
+(define BP (reg 14))
 ;; Stack pointer
 (define SP (reg 15))
 
@@ -273,9 +272,6 @@
 
 ;; Load data to to-reg from memory pointed by from-reg + offset.
 ;; With indirect = 0, copies the value from-reg + offset to to-reg without memory access.
-
-;; TODO tää ei toimi niinkun kuvittelis. key arg menee optionaalin paikalle.
-
 (define (%ld lhs rhs1 . rest)
   (define-values (pos kws) (rest-args rest))
   (define rhs2 (if (> (length pos) 0) (car pos) #f))
