@@ -14,12 +14,4 @@ def gen(name, message):
     print(f"    end")
     print("")
 
-gen("welcome", "Welcome to the ATK16 serial programmer. Press 'h' for help.\n")
-gen("help",
-    "Help:\n" +
-    "    h - help\n" +
-    "    p - program\n"
-)
-gen("program_ready",
-    "Ready to receive program data. Reset device after transmission.\n"
-)
+gen("welcome", "ATK16 serial programmer is ready to receive program data. Reset device after transmission.\n")
