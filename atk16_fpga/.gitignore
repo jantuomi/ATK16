@@ -4,3 +4,4 @@
 *.out
 *.vcd
 *.dblite
+data_strings.v

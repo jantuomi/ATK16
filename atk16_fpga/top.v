@@ -9,28 +9,37 @@ module top (
     output LED2
 );
 
-    // One-cycle pulse to trigger transmission.
-    reg start_tx = 1'b0;
-    // Data byte to be transmitted.
-    reg [7:0] data_to_send = 8'b0;
-    // Busy flag from the transmitter.
-    wire tx_busy;
-
-    reg [7:0] letter_a = 8'd97;
-
     // State machine states.
-    localparam WAIT_RX_BUSY = 3'd0;
-    localparam WAIT_RX_DONE = 3'd1;
-    localparam START_TX_1 = 3'd2;
-    localparam START_TX_2 = 3'd3;
-    localparam WAIT_TX_DONE = 3'd4;
+    localparam RX_START = 0;
+    localparam WAIT_RX_DONE = 1;
+    localparam START_TX = 2;
+    localparam TX_IN_PROG = 3;
+    localparam WAIT_TX_DONE = 4;
+    localparam HANDLE_RX_DATA = 5;
+    localparam SEND_STRING_WELCOME = 6;
+    localparam SEND_STRING_HELP = 7;
+    localparam SEND_STRING_PROGRAM_READY = 8;
+    localparam RECEIVE_PROGRAM_DATA = 9;
 
-    reg [2:0] state = WAIT_RX_BUSY;
+    reg [7:0] state = SEND_STRING_WELCOME;
+
+    // SEND_WELCOME data
+    `STR_welcome
+    reg [7:0] welcome_index = 0;
+
+    // SEND_STRING_HELP data
+    `STR_help
+    reg [7:0] help_index = 0;
+
+    // SEND_STRING_PROGRAM_READY data
+    `STR_program_ready
+    reg [7:0] program_ready_index = 0;
 
     // Synchronous state machine with reset.
     always @(posedge SYSCLK) begin
         case (state)
-            WAIT_RX_BUSY: begin
+            // STATES FOR RX
+            RX_START: begin
                 if (!rx_done) begin
                     state <= WAIT_RX_DONE;
                 end
@@ -38,21 +47,20 @@ module top (
 
             WAIT_RX_DONE: begin
                 if (rx_done) begin
-                    state <= START_TX_1;
+                    state <= state_after_rx;
                 end
             end
 
-            START_TX_1: begin
+            // STATES FOR TX
+            START_TX: begin
                 if (!tx_busy) begin
-                    //data_to_send <= letter_a;
-                    data_to_send <= data_to_receive;
                     start_tx <= 1'b1;  // trigger transmission
-                    state <= START_TX_2;
+                    state <= TX_IN_PROG;
                 end
             end
 
             // After issuing the start pulse, wait for tx_busy to go high.
-            START_TX_2: begin
+            TX_IN_PROG: begin
                 start_tx <= 1'b0;  // ensure pulse is only one cycle.
                 state <= WAIT_TX_DONE;
             end
@@ -60,35 +68,104 @@ module top (
             // Wait for the transmitter to finish sending the byte.
             WAIT_TX_DONE: begin
                 if (!tx_busy) begin
-                    state <= WAIT_RX_BUSY;
+                    state <= state_after_tx;
                 end
             end
 
-            default: state <= WAIT_RX_BUSY;
+            // STATES FOR PROCESSING DATA
+            HANDLE_RX_DATA: begin
+                if (data_rx == cmd_program) begin
+                    state <= SEND_STRING_PROGRAM_READY;
+                end else if (data_rx == cmd_help) begin
+                    state <= SEND_STRING_HELP;
+                end else begin
+                    state <= RX_START;
+                end
+            end
+
+            SEND_STRING_WELCOME: begin
+                if (welcome_index < 8'd`LEN_welcome) begin
+                    data_tx <= str_welcome[welcome_index];
+                    welcome_index <= welcome_index + 1;
+                    state <= START_TX;
+                    state_after_tx <= SEND_STRING_WELCOME;
+                end else begin
+                    welcome_index <= 0;
+                    state <= RX_START;
+                    state_after_tx <= RX_START;
+                end
+            end
+
+            SEND_STRING_HELP: begin
+                if (help_index < 8'd`LEN_help) begin
+                    data_tx <= str_help[help_index];
+                    help_index <= help_index + 1;
+                    state <= START_TX;
+                    state_after_tx <= SEND_STRING_HELP;
+                end else begin
+                    help_index <= 0;
+                    state <= RX_START;
+                    state_after_tx <= RX_START;
+                end
+            end
+
+            SEND_STRING_PROGRAM_READY: begin
+                if (program_ready_index < 8'd`LEN_program_ready) begin
+                    data_tx <= str_program_ready[program_ready_index];
+                    program_ready_index <= program_ready_index + 1;
+                    state <= START_TX;
+                    state_after_tx <= SEND_STRING_PROGRAM_READY;
+                end else begin
+                    program_ready_index <= 0;
+                    state <= RECEIVE_PROGRAM_DATA;
+                    state_after_tx <= RX_START;
+                end
+            end
+
+            RECEIVE_PROGRAM_DATA: begin
+                // TODO write data to flash
+                state <= RX_START;
+                state_after_rx <= RECEIVE_PROGRAM_DATA;
+            end
+
+            default: state <= RX_START;
         endcase
 
     end
+
+    // One-cycle pulse to trigger transmission.
+    reg        start_tx = 1'b0;
+    // Data byte to be transmitted.
+    reg  [7:0] data_tx = 8'b0;
+    // Busy flag from the transmitter.
+    wire       tx_busy;
+    // State to transition to after TX done.
+    reg  [7:0] state_after_tx = RX_START;
+
+    reg  [7:0] cmd_help = 8'd104;  // h
+    reg  [7:0] cmd_program = 8'd112;  // p
 
     // Instantiate the UART transmitter.
     uart_tx uart_inst (
         .clk  (SYSCLK),
         .start(start_tx),   // One-cycle pulse to start transmission.
-        .data (data_to_send),
+        .data (data_tx),
         .tx   (SERIAL_TX),
         .busy (tx_busy)
     );
 
-    wire [7:0] data_to_receive;
+    wire [7:0] data_rx;
     wire rx_done;
+    reg [7:0] state_after_rx = HANDLE_RX_DATA;
 
     uart_rx uart_rx_inst (
         .clk (SYSCLK),
         .rx  (SERIAL_RX),
-        .data(data_to_receive),
+        .data(data_rx),
         .done(rx_done)
     );
 
-    assign LED1 = data_to_receive == letter_a ? 1 : 0;
+    assign LED1 = data_rx == cmd_program;
     assign LED2 = LED1;
 
 endmodule

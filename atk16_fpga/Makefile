@@ -1,6 +1,9 @@
 BIN ?= program.bin
 
-hardware.bin: top.v
+data_strings.v: gen_data_strings_v.py
+	python gen_data_strings_v.py > data_strings.v
+
+hardware.bin: top.v data_strings.v
 	apio verify
 	apio test
 	apio build
