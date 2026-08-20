@@ -4,7 +4,7 @@ ATK16 is a homegrown processor and computing ecosystem project.
 
 A detailed description is hosted at [jan.systems/projects/ATK16](https://jan.systems/projects/ATK16).
 
-![ATK16 text mode screenshot](https://jan.systems/files/atk16-text-mode.png)
+![ATK16 text mode screenshot](https://jan.systems/projects/atk16/text-mode.png)
 
 ## Author
 
