@@ -194,6 +194,7 @@ impl Cu {
 
     pub fn execute(
         &self,
+        config: &Config,
         fram: &mut Fram,
         ds: &mut Stack,
         cs: &mut Stack,
@@ -201,7 +202,11 @@ impl Cu {
         halted: &mut bool,
         inst: &Inst,
     ) {
-        *pc += 1;
+        if config.debug {
+            println!("@ {:04x}  ${:?}", pc, inst);
+        }
+
+        *pc = ((*pc as usize + 1) % N_ADDRESSES) as Word;
         match inst {
             Inst::Nop() => {}
             Inst::Halt() => {
@@ -304,15 +309,47 @@ impl Cu {
     }
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let path_arg = match &args[..] {
-        [_, str] => str,
-        _ => panic!("Invalid args: {:?}", args),
-    };
+struct Config {
+    debug: bool,
+    step: bool,
+    path: PathBuf,
+}
 
-    let path = PathBuf::from(path_arg);
-    let mut fram = Fram::load_from_image(&path).unwrap_or(Fram::new());
+fn parse_args() -> Config {
+    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
+    let mut i = 1;
+    let mut path: Option<PathBuf> = None;
+    let mut debug = false;
+    let mut step = false;
+    while i < args.len() {
+        match &args[i..] {
+            ["--debug", ..] => {
+                debug = true;
+                i += 1;
+            }
+            ["--step", ..] => {
+                step = true;
+                i += 1;
+            }
+            [str] => {
+                path = Some(PathBuf::from(str));
+                i += 1;
+            }
+            _ => panic!("Invalid args: {:?}", args),
+        };
+    }
+
+    Config {
+        path: path.unwrap(),
+        step,
+        debug,
+    }
+}
+
+fn main() {
+    let config = parse_args();
+    let mut fram = Fram::load_from_image(&config.path).unwrap_or(Fram::new());
 
     let cu = Cu {};
     let mut pc = 0u16;
@@ -330,9 +367,22 @@ fn main() {
     while !halted && !interrupted.load(Ordering::SeqCst) {
         let bytes = cu.fetch(&fram, &pc);
         let inst = cu.decode(&bytes);
-        cu.execute(&mut fram, &mut ds, &mut cs, &mut pc, &mut halted, &inst);
+        cu.execute(
+            &config,
+            &mut fram,
+            &mut ds,
+            &mut cs,
+            &mut pc,
+            &mut halted,
+            &inst,
+        );
+
+        if config.step {
+            let mut line = String::new();
+            std::io::stdin().read_line(&mut line).unwrap();
+        }
     }
 
-    println!("Halted, saving image to {}", path.display());
-    fram.save_to_image(&path);
+    println!("Halted, saving image to {}", config.path.display());
+    fram.save_to_image(&config.path);
 }
