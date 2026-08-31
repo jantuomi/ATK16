@@ -1,14 +1,10 @@
-use std::env::Args;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{
     fs::OpenOptions,
     io::{Read, Write},
     path::{Path, PathBuf},
-    process::exit,
 };
-
-use crate::Inst::{Halt, Nop};
 
 type Word = u16;
 
@@ -113,6 +109,53 @@ impl Fram {
     }
 }
 
+const STACK_SIZE: usize = 256;
+struct Stack {
+    pub tos: Word,
+    pub nos: Word,
+    pub rest: [Word; STACK_SIZE],
+    sp: usize, // some small register in reality
+}
+
+impl Stack {
+    pub fn new() -> Stack {
+        Stack {
+            tos: 0,
+            nos: 0,
+            rest: [0; STACK_SIZE],
+            sp: 0,
+        }
+    }
+
+    pub fn push(&mut self, datum: Word) {
+        self.rest[self.sp] = self.nos;
+        self.nos = self.tos;
+        self.tos = datum;
+        self.sp = (self.sp + 1) % STACK_SIZE;
+    }
+
+    pub fn pop(&mut self) -> Word {
+        let ret = self.tos.clone();
+
+        self.sp = (self.sp + STACK_SIZE - 1) % STACK_SIZE;
+        self.tos = self.nos;
+        self.nos = self.rest[self.sp];
+
+        ret
+    }
+
+    pub fn copy_to_top(&mut self, index: &Word) {
+        let datum = match index {
+            0 => self.tos,
+            1 => self.nos,
+            other if (*other as usize - 2) < STACK_SIZE => self.rest[*other as usize - 2],
+            _ => panic!("Invalid copy_to_top index {:?}", index),
+        };
+
+        self.push(datum);
+    }
+}
+
 struct Cu {}
 
 impl Cu {
@@ -149,14 +192,114 @@ impl Cu {
         }
     }
 
-    pub fn execute(&self, fram: &mut Fram, pc: &mut u16, halted: &mut bool, inst: &Inst) {
+    pub fn execute(
+        &self,
+        fram: &mut Fram,
+        ds: &mut Stack,
+        cs: &mut Stack,
+        pc: &mut u16,
+        halted: &mut bool,
+        inst: &Inst,
+    ) {
         *pc += 1;
         match inst {
             Inst::Nop() => {}
             Inst::Halt() => {
                 *halted = true;
             }
-            other => todo!("{:?}", other),
+            Inst::Load() => {
+                let addr = ds.pop();
+                let datum = fram.read(&addr);
+                ds.push(*datum);
+            }
+            Inst::Store() => {
+                let addr = ds.pop();
+                let datum = ds.pop();
+                fram.write(&addr, datum);
+            }
+            Inst::Add() => {
+                let lhs = ds.pop();
+                let rhs = ds.pop();
+                ds.push(lhs.wrapping_add(rhs));
+            }
+            Inst::Subtract() => {
+                let lhs = ds.pop();
+                let rhs = ds.pop();
+                ds.push(lhs.wrapping_sub(rhs));
+            }
+            Inst::And() => {
+                let lhs = ds.pop();
+                let rhs = ds.pop();
+                ds.push(lhs & rhs);
+            }
+            Inst::Or() => {
+                let lhs = ds.pop();
+                let rhs = ds.pop();
+                ds.push(lhs | rhs);
+            }
+            Inst::Xor() => {
+                let lhs = ds.pop();
+                let rhs = ds.pop();
+                ds.push(lhs ^ rhs);
+            }
+            Inst::ShiftLogicalL() => {
+                let lhs = ds.pop();
+                let rhs = ds.pop();
+                ds.push(lhs << rhs);
+            }
+            Inst::ShiftLogicalR() => {
+                let lhs = ds.pop();
+                let rhs = ds.pop();
+                ds.push(lhs >> rhs);
+            }
+            Inst::ShiftArithR() => {
+                let lhs = ds.pop();
+                let rhs = ds.pop();
+                let result = ((lhs as i16) >> rhs) as u16;
+                ds.push(result);
+            }
+            Inst::Ret() => {
+                *pc = cs.pop();
+            }
+            Inst::RetIfZero() => {
+                let cond = ds.pop();
+                if cond == 0 {
+                    *pc = cs.pop();
+                }
+            }
+            Inst::Drop() => _ = ds.pop(),
+            Inst::Jump(addr) => {
+                *pc = *addr;
+            }
+            Inst::JumpIfZero(addr) => {
+                let cond = ds.pop();
+                if cond == 0 {
+                    *pc = *addr;
+                } else {
+                    *pc += 1;
+                }
+            }
+            Inst::Call(addr) => {
+                cs.push(*pc + 1); // already incremented once
+                *pc = *addr;
+            }
+            Inst::CallIfZero(addr) => {
+                let cond = ds.pop();
+                if cond == 0 {
+                    cs.push(*pc + 1); // already incremented once
+                    *pc = *addr;
+                } else {
+                    *pc += 1;
+                }
+            }
+            Inst::Literal(datum) => {
+                ds.push(*datum);
+                *pc += 1;
+            }
+            Inst::Get(index) => {
+                ds.copy_to_top(index);
+                *pc += 1;
+            }
         }
     }
 }
@@ -174,6 +317,8 @@ fn main() {
     let cu = Cu {};
     let mut pc = 0u16;
     let mut halted = false;
+    let mut ds = Stack::new();
+    let mut cs = Stack::new();
 
     let interrupted = Arc::new(AtomicBool::new(false));
     let flag = interrupted.clone();
@@ -185,7 +330,7 @@ fn main() {
     while !halted && !interrupted.load(Ordering::SeqCst) {
         let bytes = cu.fetch(&fram, &pc);
         let inst = cu.decode(&bytes);
-        cu.execute(&mut fram, &mut pc, &mut halted, &inst);
+        cu.execute(&mut fram, &mut ds, &mut cs, &mut pc, &mut halted, &inst);
     }
 
     println!("Halted, saving image to {}", path.display());
