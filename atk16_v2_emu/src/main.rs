@@ -347,6 +347,9 @@ fn parse_args() -> Config {
     }
 }
 
+#[cfg(test)]
+mod tests;
+
 fn main() {
     let config = parse_args();
     let mut fram = Fram::load_from_image(&config.path).unwrap_or(Fram::new());
