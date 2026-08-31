@@ -1,11 +1,18 @@
+use std::env::Args;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{
     fs::OpenOptions,
     io::{Read, Write},
     path::{Path, PathBuf},
+    process::exit,
 };
+
+use crate::Inst::{Halt, Nop};
 
 type Word = u16;
 
+#[derive(Debug)]
 enum Inst {
     Nop(),
     Halt(),
@@ -106,8 +113,81 @@ impl Fram {
     }
 }
 
+struct Cu {}
+
+impl Cu {
+    pub fn fetch(&self, fram: &Fram, pc: &Word) -> [u16; 2] {
+        let a0 = pc;
+        let a1 = ((*pc as usize + 1) % N_ADDRESSES) as u16;
+        [*fram.read(a0), *fram.read(&a1)]
+    }
+
+    pub fn decode(&self, bytes: &[u16; 2]) -> Inst {
+        match bytes {
+            [0x00, _] => Inst::Nop(),
+            [0x01, _] => Inst::Halt(),
+            [0x02, _] => Inst::Load(),
+            [0x03, _] => Inst::Store(),
+            [0x04, _] => Inst::Add(),
+            [0x10, _] => Inst::Subtract(),
+            [0x11, _] => Inst::And(),
+            [0x12, _] => Inst::Or(),
+            [0x13, _] => Inst::Xor(),
+            [0x14, _] => Inst::ShiftLogicalL(),
+            [0x15, _] => Inst::ShiftLogicalR(),
+            [0x16, _] => Inst::ShiftArithR(),
+            [0x20, _] => Inst::Ret(),
+            [0x21, _] => Inst::RetIfZero(),
+            [0x22, _] => Inst::Drop(),
+            [0x60, addr] => Inst::Jump(*addr),
+            [0x61, addr] => Inst::JumpIfZero(*addr),
+            [0x62, addr] => Inst::Call(*addr),
+            [0x63, addr] => Inst::CallIfZero(*addr),
+            [0x64, word] => Inst::Literal(*word),
+            [0x65, index] => Inst::Get(*index),
+            _ => panic!("Undecodeable instruction: {:#x} {:#x}", bytes[0], bytes[1]),
+        }
+    }
+
+    pub fn execute(&self, fram: &mut Fram, pc: &mut u16, halted: &mut bool, inst: &Inst) {
+        *pc += 1;
+        match inst {
+            Inst::Nop() => {}
+            Inst::Halt() => {
+                *halted = true;
+            }
+            other => todo!("{:?}", other),
+        }
+    }
+}
+
 fn main() {
-    let path = PathBuf::from("image.bin");
+    let args: Vec<String> = std::env::args().collect();
+    let path_arg = match &args[..] {
+        [_, str] => str,
+        _ => panic!("Invalid args: {:?}", args),
+    };
+
+    let path = PathBuf::from(path_arg);
     let mut fram = Fram::load_from_image(&path).unwrap_or(Fram::new());
+
+    let cu = Cu {};
+    let mut pc = 0u16;
+    let mut halted = false;
+
+    let interrupted = Arc::new(AtomicBool::new(false));
+    let flag = interrupted.clone();
+    ctrlc::set_handler(move || {
+        flag.store(true, Ordering::SeqCst);
+    })
+    .unwrap();
+
+    while !halted && !interrupted.load(Ordering::SeqCst) {
+        let bytes = cu.fetch(&fram, &pc);
+        let inst = cu.decode(&bytes);
+        cu.execute(&mut fram, &mut pc, &mut halted, &inst);
+    }
+
+    println!("Halted, saving image to {}", path.display());
     fram.save_to_image(&path);
 }
