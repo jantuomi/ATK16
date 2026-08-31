@@ -1,6 +1,6 @@
 use std::{
-    fs::{File, OpenOptions},
-    io::Write,
+    fs::OpenOptions,
+    io::{Read, Write},
     path::{Path, PathBuf},
 };
 
@@ -31,14 +31,14 @@ enum Inst {
 }
 
 const N_ADDRESSES: usize = 2usize.pow(16);
-struct FRAM {
+struct Fram {
     chip0: [Word; N_ADDRESSES / 2],
     chip1: [Word; N_ADDRESSES / 2],
 }
 
-impl FRAM {
-    pub fn new() -> FRAM {
-        FRAM {
+impl Fram {
+    pub fn new() -> Fram {
+        Fram {
             chip0: [0; N_ADDRESSES / 2],
             chip1: [0; N_ADDRESSES / 2],
         }
@@ -64,6 +64,27 @@ impl FRAM {
         }
     }
 
+    pub fn load_from_image(path: &Path) -> Option<Fram> {
+        if !path.exists() {
+            return None;
+        }
+        let mut f = OpenOptions::new().read(true).open(path).unwrap();
+        let mut buf = [0u8; N_ADDRESSES * 2];
+        f.read_exact(&mut buf).unwrap();
+
+        let mut _addr = 0usize;
+        let mut fram = Fram::new();
+        while _addr < N_ADDRESSES {
+            let addr = _addr as u16;
+            let bytes: [u8; 2] = [buf[2 * _addr], buf[2 * _addr + 1]];
+            let word = u16::from_be_bytes(bytes);
+            fram.write(&addr, word);
+            _addr += 1;
+        }
+
+        Some(fram)
+    }
+
     pub fn save_to_image(&self, path: &Path) {
         let mut f = OpenOptions::new()
             .create(true)
@@ -86,6 +107,7 @@ impl FRAM {
 }
 
 fn main() {
-    let mut fram = FRAM::new();
-    fram.save_to_image(&PathBuf::from("image.bin"));
+    let path = PathBuf::from("image.bin");
+    let mut fram = Fram::load_from_image(&path).unwrap_or(Fram::new());
+    fram.save_to_image(&path);
 }
