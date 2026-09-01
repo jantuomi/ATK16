@@ -3,7 +3,8 @@ use super::*;
 fn run_program(insts: &[Inst]) -> Mem {
     let config = Config {
         debug: false,
-        step: false,
+        slow: false,
+        gen_kernel: false,
         path: PathBuf::new(),
     };
     let words = utils::encode(insts);

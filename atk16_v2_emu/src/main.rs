@@ -8,11 +8,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+mod kernel;
 mod utils;
 
 type Word = u16;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Inst {
     Nop(),
     Halt(),
@@ -34,7 +35,7 @@ enum Inst {
     Call(Word),
     CallIfZero(Word),
     Literal(Word),
-    Get(Word),
+    Get(u8),
 }
 
 const N_ADDRESSES: usize = 2usize.pow(16);
@@ -169,29 +170,30 @@ impl Cu {
         [fram.read(a0), fram.read(&a1)]
     }
 
-    pub fn decode(&self, bytes: &[u16; 2]) -> Inst {
-        match bytes {
-            [0x00, _] => Inst::Nop(),
-            [0x01, _] => Inst::Halt(),
-            [0x02, _] => Inst::Load(),
-            [0x03, _] => Inst::Store(),
-            [0x04, _] => Inst::Add(),
-            [0x10, _] => Inst::Subtract(),
-            [0x11, _] => Inst::And(),
-            [0x12, _] => Inst::Or(),
-            [0x13, _] => Inst::Xor(),
-            [0x14, _] => Inst::ShiftLogicalL(),
-            [0x15, _] => Inst::ShiftLogicalR(),
-            [0x16, _] => Inst::ShiftArithR(),
-            [0x20, _] => Inst::Ret(),
-            [0x21, _] => Inst::RetIfZero(),
-            [0x22, _] => Inst::Drop(),
-            [0x60, addr] => Inst::Jump(*addr),
-            [0x61, addr] => Inst::JumpIfZero(*addr),
-            [0x62, addr] => Inst::Call(*addr),
-            [0x63, addr] => Inst::CallIfZero(*addr),
-            [0x64, word] => Inst::Literal(*word),
-            [0x65, index] => Inst::Get(*index),
+    pub fn decode(&self, words: &[u16; 2]) -> Inst {
+        let bytes: Vec<u8> = words.iter().flat_map(|word| word.to_be_bytes()).collect();
+        match bytes[..] {
+            [0x00, _, _, _] => Inst::Nop(),
+            [0x01, _, _, _] => Inst::Halt(),
+            [0x02, _, _, _] => Inst::Load(),
+            [0x03, _, _, _] => Inst::Store(),
+            [0x04, _, _, _] => Inst::Add(),
+            [0x10, _, _, _] => Inst::Subtract(),
+            [0x11, _, _, _] => Inst::And(),
+            [0x12, _, _, _] => Inst::Or(),
+            [0x13, _, _, _] => Inst::Xor(),
+            [0x14, _, _, _] => Inst::ShiftLogicalL(),
+            [0x15, _, _, _] => Inst::ShiftLogicalR(),
+            [0x16, _, _, _] => Inst::ShiftArithR(),
+            [0x20, _, _, _] => Inst::Ret(),
+            [0x21, _, _, _] => Inst::RetIfZero(),
+            [0x22, _, _, _] => Inst::Drop(),
+            [0x30, code, _, _] => Inst::Get(code),
+            [0x60, _, msb, lsb] => Inst::Jump(u16::from_be_bytes([msb, lsb])),
+            [0x61, _, msb, lsb] => Inst::JumpIfZero(u16::from_be_bytes([msb, lsb])),
+            [0x62, _, msb, lsb] => Inst::Call(u16::from_be_bytes([msb, lsb])),
+            [0x63, _, msb, lsb] => Inst::CallIfZero(u16::from_be_bytes([msb, lsb])),
+            [0x64, _, msb, lsb] => Inst::Literal(u16::from_be_bytes([msb, lsb])),
             _ => panic!("Undecodeable instruction: {:#x} {:#x}", bytes[0], bytes[1]),
         }
     }
@@ -278,6 +280,9 @@ impl Cu {
                 }
             }
             Inst::Drop() => _ = mem.ds.pop(),
+            Inst::Get(index) => {
+                mem.ds.copy_to_top(&(*index as u16));
+            }
             Inst::Jump(addr) => {
                 *pc = *addr;
             }
@@ -306,27 +311,21 @@ impl Cu {
                 mem.ds.push(*datum);
                 *pc += 1;
             }
-            Inst::Get(index) => {
-                mem.ds.copy_to_top(index);
-                *pc += 1;
-            }
         }
     }
 }
 
-#[repr(usize)]
-enum MmioCode {
-    SerialRead = 0x00,
-    SerialWrite = 0x01,
-}
+const MMIO_SECTION: Word = 0xFF00;
+const MMIO_SERIAL_READ: Word = 0x00;
+const MMIO_SERIAL_WRITE: Word = 0x01;
 
 struct Mmio {
-    pub regs: [Word; 256],
+    pub ports: [Word; 256],
 }
 
 impl Mmio {
     pub fn new() -> Mmio {
-        Mmio { regs: [0; 256] }
+        Mmio { ports: [0; 256] }
     }
 }
 
@@ -343,7 +342,7 @@ impl Mem {
             self.fram.read(addr)
         } else {
             let reg_select = *addr & 0xff;
-            self.mmio.regs[reg_select as usize]
+            self.mmio.ports[reg_select as usize]
         }
     }
 
@@ -352,14 +351,15 @@ impl Mem {
             self.fram.write(addr, datum);
         } else {
             let reg_select = *addr & 0xff;
-            self.mmio.regs[reg_select as usize] = datum;
+            self.mmio.ports[reg_select as usize] = datum;
         }
     }
 }
 
 struct Config {
     debug: bool,
-    step: bool,
+    slow: bool,
+    gen_kernel: bool,
     path: PathBuf,
 }
 
@@ -369,29 +369,32 @@ fn parse_args() -> Config {
     let mut i = 1;
     let mut path: Option<PathBuf> = None;
     let mut debug = false;
-    let mut step = false;
+    let mut slow = false;
+    let mut gen_kernel = false;
     while i < args.len() {
         match &args[i..] {
             ["--debug", ..] => {
                 debug = true;
-                i += 1;
             }
-            ["--step", ..] => {
-                step = true;
-                i += 1;
+            ["--slow", ..] => {
+                slow = true;
+            }
+            ["--gen-kernel", ..] => {
+                gen_kernel = true;
             }
             [str] => {
                 path = Some(PathBuf::from(str));
-                i += 1;
             }
             _ => panic!("Invalid args: {:?}", args),
         };
+        i += 1;
     }
 
     Config {
-        path: path.unwrap(),
-        step,
+        slow,
         debug,
+        gen_kernel,
+        path: path.unwrap(),
     }
 }
 
@@ -420,7 +423,7 @@ fn handle_console_input(mmio: &mut Mmio) -> Result<(), UserInputExc> {
             }
             Ok(Event::Key(ev)) => {
                 if let KeyCode::Char(c) = ev.code {
-                    mmio.regs[MmioCode::SerialRead as usize] = c as u16
+                    mmio.ports[MMIO_SERIAL_READ as usize] = c as u16
                 } else {
                     continue;
                 }
@@ -432,11 +435,11 @@ fn handle_console_input(mmio: &mut Mmio) -> Result<(), UserInputExc> {
 }
 
 fn handle_console_output(mmio: &mut Mmio) {
-    let serial_write = mmio.regs[MmioCode::SerialWrite as usize];
+    let serial_write = mmio.ports[MMIO_SERIAL_WRITE as usize];
     if serial_write != 0 {
         print!("{}", serial_write as u8 as char);
         std::io::stdout().flush().unwrap();
-        mmio.regs[MmioCode::SerialWrite as usize] = 0;
+        mmio.ports[MMIO_SERIAL_WRITE as usize] = 0;
     }
 }
 
@@ -454,9 +457,14 @@ impl Drop for RawModeGuard {
 }
 
 fn main() {
+    let config = parse_args();
+    if config.gen_kernel {
+        kernel::gen_kernel_image(&config.path);
+        return;
+    }
+
     let _guard = RawModeGuard::new().unwrap();
 
-    let config = parse_args();
     let fram = Fram::load_from_image(&config.path).unwrap_or(Fram::new());
 
     let cu = Cu {};
@@ -484,7 +492,7 @@ fn main() {
         let inst = cu.decode(&bytes);
         cu.execute(&config, &mut mem, &mut pc, &mut halted, &inst);
 
-        if config.step {
+        if config.slow {
             sleep(Duration::from_secs(1));
         }
     }
