@@ -1,4 +1,4 @@
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, poll, read};
+use crossterm::event::{Event, KeyCode, KeyModifiers, poll, read};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use std::thread::sleep;
 use std::time::Duration;
@@ -7,6 +7,8 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
+
+mod utils;
 
 type Word = u16;
 
@@ -137,7 +139,7 @@ impl Stack {
     }
 
     pub fn pop(&mut self) -> Word {
-        let ret = self.tos.clone();
+        let ret = self.tos;
 
         self.sp = (self.sp + STACK_SIZE - 1) % STACK_SIZE;
         self.tos = self.nos;
@@ -455,7 +457,7 @@ fn main() {
     let _guard = RawModeGuard::new().unwrap();
 
     let config = parse_args();
-    let mut fram = Fram::load_from_image(&config.path).unwrap_or(Fram::new());
+    let fram = Fram::load_from_image(&config.path).unwrap_or(Fram::new());
 
     let cu = Cu {};
     let mut pc = 0u16;

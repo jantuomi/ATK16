@@ -1,42 +1,12 @@
 use super::*;
 
-fn encode(insts: &[Inst]) -> Vec<u16> {
-    let mut words = Vec::new();
-    for inst in insts {
-        match inst {
-            Inst::Nop() => words.push(0x00),
-            Inst::Halt() => words.push(0x01),
-            Inst::Load() => words.push(0x02),
-            Inst::Store() => words.push(0x03),
-            Inst::Add() => words.push(0x04),
-            Inst::Subtract() => words.push(0x10),
-            Inst::And() => words.push(0x11),
-            Inst::Or() => words.push(0x12),
-            Inst::Xor() => words.push(0x13),
-            Inst::ShiftLogicalL() => words.push(0x14),
-            Inst::ShiftLogicalR() => words.push(0x15),
-            Inst::ShiftArithR() => words.push(0x16),
-            Inst::Ret() => words.push(0x20),
-            Inst::RetIfZero() => words.push(0x21),
-            Inst::Drop() => words.push(0x22),
-            Inst::Jump(addr) => { words.push(0x60); words.push(*addr); }
-            Inst::JumpIfZero(addr) => { words.push(0x61); words.push(*addr); }
-            Inst::Call(addr) => { words.push(0x62); words.push(*addr); }
-            Inst::CallIfZero(addr) => { words.push(0x63); words.push(*addr); }
-            Inst::Literal(v) => { words.push(0x64); words.push(*v); }
-            Inst::Get(i) => { words.push(0x65); words.push(*i); }
-        }
-    }
-    words
-}
-
 fn run_program(insts: &[Inst]) -> Mem {
     let config = Config {
         debug: false,
         step: false,
         path: PathBuf::new(),
     };
-    let words = encode(insts);
+    let words = utils::encode(insts);
     let mut fram = Fram::new();
     for (i, &word) in words.iter().enumerate() {
         fram.write(&(i as u16), word);
@@ -86,49 +56,84 @@ fn test_nop() {
 // ADD: lhs=pop() (TOS), rhs=pop() (NOS), push(lhs+rhs).
 #[test]
 fn test_add() {
-    let mem = run_program(&[Inst::Literal(3), Inst::Literal(5), Inst::Add(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(3),
+        Inst::Literal(5),
+        Inst::Add(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 8);
 }
 
 // ADD wraps around on overflow.
 #[test]
 fn test_add_wrapping() {
-    let mem = run_program(&[Inst::Literal(0xFFFF), Inst::Literal(1), Inst::Add(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(0xFFFF),
+        Inst::Literal(1),
+        Inst::Add(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 0);
 }
 
 // SUB: lhs=pop() (TOS=10), rhs=pop() (NOS=3), push(10-3)=7.
 #[test]
 fn test_subtract() {
-    let mem = run_program(&[Inst::Literal(3), Inst::Literal(10), Inst::Subtract(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(3),
+        Inst::Literal(10),
+        Inst::Subtract(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 7);
 }
 
 // SUB wraps around on underflow.
 #[test]
 fn test_subtract_wrapping() {
-    let mem = run_program(&[Inst::Literal(1), Inst::Literal(0), Inst::Subtract(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(1),
+        Inst::Literal(0),
+        Inst::Subtract(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 0xFFFF);
 }
 
 // AND: bitwise and of TOS and NOS.
 #[test]
 fn test_and() {
-    let mem = run_program(&[Inst::Literal(0x0F0F), Inst::Literal(0xFF00), Inst::And(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(0x0F0F),
+        Inst::Literal(0xFF00),
+        Inst::And(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 0x0F00);
 }
 
 // OR: bitwise or of TOS and NOS.
 #[test]
 fn test_or() {
-    let mem = run_program(&[Inst::Literal(0xF0F0), Inst::Literal(0x0F0F), Inst::Or(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(0xF0F0),
+        Inst::Literal(0x0F0F),
+        Inst::Or(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 0xFFFF);
 }
 
 // XOR: bitwise xor of TOS and NOS.
 #[test]
 fn test_xor() {
-    let mem = run_program(&[Inst::Literal(0xFFFF), Inst::Literal(0x0F0F), Inst::Xor(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(0xFFFF),
+        Inst::Literal(0x0F0F),
+        Inst::Xor(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 0xF0F0);
 }
 
@@ -136,7 +141,12 @@ fn test_xor() {
 #[test]
 fn test_sll() {
     // NOS=2 (shift), TOS=1 (value): 1 << 2 = 4
-    let mem = run_program(&[Inst::Literal(2), Inst::Literal(1), Inst::ShiftLogicalL(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(2),
+        Inst::Literal(1),
+        Inst::ShiftLogicalL(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 4);
 }
 
@@ -144,7 +154,12 @@ fn test_sll() {
 #[test]
 fn test_srl() {
     // NOS=1 (shift), TOS=0x8000 (value): 0x8000 >> 1 = 0x4000
-    let mem = run_program(&[Inst::Literal(1), Inst::Literal(0x8000), Inst::ShiftLogicalR(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(1),
+        Inst::Literal(0x8000),
+        Inst::ShiftLogicalR(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 0x4000);
 }
 
@@ -152,15 +167,30 @@ fn test_srl() {
 #[test]
 fn test_sra() {
     // NOS=1 (shift), TOS=0x8000 (-32768 as i16): result = 0xC000
-    let mem = run_program(&[Inst::Literal(1), Inst::Literal(0x8000), Inst::ShiftArithR(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(1),
+        Inst::Literal(0x8000),
+        Inst::ShiftArithR(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 0xC000);
 }
 
 // SRL vs SRA differ when the sign bit is set.
 #[test]
 fn test_srl_vs_sra_sign_bit() {
-    let mem_srl = run_program(&[Inst::Literal(1), Inst::Literal(0x8000), Inst::ShiftLogicalR(), Inst::Halt()]);
-    let mem_sra = run_program(&[Inst::Literal(1), Inst::Literal(0x8000), Inst::ShiftArithR(), Inst::Halt()]);
+    let mem_srl = run_program(&[
+        Inst::Literal(1),
+        Inst::Literal(0x8000),
+        Inst::ShiftLogicalR(),
+        Inst::Halt(),
+    ]);
+    let mem_sra = run_program(&[
+        Inst::Literal(1),
+        Inst::Literal(0x8000),
+        Inst::ShiftArithR(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem_srl.ds.tos, 0x4000); // zero-fill
     assert_eq!(mem_sra.ds.tos, 0xC000); // sign-fill
 }
@@ -168,7 +198,12 @@ fn test_srl_vs_sra_sign_bit() {
 // DROP discards TOS, exposing NOS as new TOS.
 #[test]
 fn test_drop() {
-    let mem = run_program(&[Inst::Literal(1), Inst::Literal(2), Inst::Drop(), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(1),
+        Inst::Literal(2),
+        Inst::Drop(),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 1);
 }
 
@@ -184,7 +219,12 @@ fn test_get_tos() {
 #[test]
 fn test_get_nos() {
     // Stack before GET: tos=7, nos=3
-    let mem = run_program(&[Inst::Literal(3), Inst::Literal(7), Inst::Get(1), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(3),
+        Inst::Literal(7),
+        Inst::Get(1),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 3); // NOS duplicated to top
     assert_eq!(mem.ds.nos, 7);
 }
@@ -206,7 +246,12 @@ fn test_jumpz_taken() {
     // addr 2-3: JumpIfZero(6)
     // addr 4-5: Literal(99)  <- skipped
     // addr 6:   Halt
-    let mem = run_program(&[Inst::Literal(0), Inst::JumpIfZero(6), Inst::Literal(99), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(0),
+        Inst::JumpIfZero(6),
+        Inst::Literal(99),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 0); // Literal(99) skipped; condition was consumed
 }
 
@@ -217,7 +262,12 @@ fn test_jumpz_not_taken() {
     // addr 2-3: JumpIfZero(6)  <- not taken, falls to addr 4
     // addr 4-5: Literal(42)
     // addr 6:   Halt
-    let mem = run_program(&[Inst::Literal(1), Inst::JumpIfZero(6), Inst::Literal(42), Inst::Halt()]);
+    let mem = run_program(&[
+        Inst::Literal(1),
+        Inst::JumpIfZero(6),
+        Inst::Literal(42),
+        Inst::Halt(),
+    ]);
     assert_eq!(mem.ds.tos, 42);
 }
 
